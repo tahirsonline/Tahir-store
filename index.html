@@ -1669,6 +1669,77 @@ html[lang="en"] .logo .store-brand-ur{display:none!important}
 html[lang="en"] .logo .store-brand-en{display:inline!important}
 
 </style>
+<style>
+
+/* Store logo: ALWAYS English in both Urdu and English modes */
+.logo .store-brand-ur,
+.premium-logo .store-brand-ur,
+.header .store-brand-ur,
+.store-brand-ur {
+    display: none !important;
+}
+.logo .store-brand-en,
+.premium-logo .store-brand-en,
+.header .store-brand-en,
+.store-brand-en {
+    display: inline !important;
+    font-family: Arial, sans-serif !important;
+    text-transform: uppercase !important;
+}
+
+
+/* =====================================================
+   ADMIN THEME SWITCHER
+===================================================== */
+:root{
+  --theme-primary:#b98218;
+  --theme-primary-dark:#8e6311;
+  --theme-header:#0b0b0b;
+  --theme-card:#faf7f0;
+}
+html[data-theme="black-gold"]{--theme-primary:#b98218;--theme-primary-dark:#8e6311;--theme-header:#0b0b0b;--theme-card:#faf7f0;--theme-bg:#ffffff;--theme-text:#111111}
+html[data-theme="royal-blue"]{--theme-primary:#2457a6;--theme-primary-dark:#173b73;--theme-header:#0b1526;--theme-card:#eef4ff;--theme-bg:#ffffff;--theme-text:#111111}
+html[data-theme="emerald"]{--theme-primary:#177d5c;--theme-primary-dark:#0f5c43;--theme-header:#071b15;--theme-card:#edf8f4;--theme-bg:#ffffff;--theme-text:#111111}
+html[data-theme="maroon"]{--theme-primary:#8b2635;--theme-primary-dark:#651a27;--theme-header:#210b10;--theme-card:#fff1f3;--theme-bg:#ffffff;--theme-text:#111111}
+html[data-theme="custom"]{--theme-primary:#b98218;--theme-primary-dark:#8e6311;--theme-header:#0b0b0b;--theme-card:#faf7f0;--theme-bg:#ffffff;--theme-text:#111111}
+html[data-theme="black-gold"] .nav-inner,html[data-theme="black-gold"] nav,
+html[data-theme="royal-blue"] .nav-inner,html[data-theme="royal-blue"] nav,
+html[data-theme="emerald"] .nav-inner,html[data-theme="emerald"] nav,
+html[data-theme="maroon"] .nav-inner,html[data-theme="maroon"] nav,
+html[data-theme="custom"] .nav-inner,html[data-theme="custom"] nav{background:var(--theme-primary)}
+html[data-theme="royal-blue"] header,html[data-theme="royal-blue"] footer,html[data-theme="royal-blue"] .topbar,
+html[data-theme="emerald"] header,html[data-theme="emerald"] footer,html[data-theme="emerald"] .topbar,
+html[data-theme="maroon"] header,html[data-theme="maroon"] footer,html[data-theme="maroon"] .topbar,
+html[data-theme="custom"] header,html[data-theme="custom"] footer,html[data-theme="custom"] .topbar{background:var(--theme-header)}
+html[data-theme="royal-blue"] .gold-btn,html[data-theme="royal-blue"] .banner-edit,
+html[data-theme="emerald"] .gold-btn,html[data-theme="emerald"] .banner-edit,
+html[data-theme="maroon"] .gold-btn,html[data-theme="maroon"] .banner-edit,
+html[data-theme="custom"] .gold-btn,html[data-theme="custom"] .banner-edit{background:var(--theme-primary)}
+html[data-theme="royal-blue"] .gold-btn:hover,html[data-theme="royal-blue"] .banner-edit:hover,
+html[data-theme="emerald"] .gold-btn:hover,html[data-theme="emerald"] .banner-edit:hover,
+html[data-theme="maroon"] .gold-btn:hover,html[data-theme="maroon"] .banner-edit:hover,
+html[data-theme="custom"] .gold-btn:hover,html[data-theme="custom"] .banner-edit:hover{background:var(--theme-primary-dark)}
+html[data-theme="royal-blue"] .feature,html[data-theme="royal-blue"] .category-shop-section,
+html[data-theme="emerald"] .feature,html[data-theme="emerald"] .category-shop-section,
+html[data-theme="maroon"] .feature,html[data-theme="maroon"] .category-shop-section,
+html[data-theme="custom"] .feature,html[data-theme="custom"] .category-shop-section{background:var(--theme-card)}
+html[data-theme="custom"] body{background:var(--theme-bg);color:var(--theme-text)}
+html[data-theme="custom"] .section h2,html[data-theme="custom"] .section-title h2,html[data-theme="custom"] .product-name,html[data-theme="custom"] .about h2{color:var(--theme-text)}
+html[data-theme="custom"] .header-inner,html[data-theme="custom"] .section,html[data-theme="custom"] .category-shop-section{background:var(--theme-bg)}
+html[data-theme="custom"] .category,html[data-theme="custom"] .product,html[data-theme="custom"] .admin-product-row,html[data-theme="custom"] .banner-form,html[data-theme="custom"] .banner-admin-card,html[data-theme="custom"] .login-box,html[data-theme="custom"] .edit-modal-box,html[data-theme="custom"] .checkout-box{--local-card:var(--theme-card)}
+
+.theme-preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.theme-option{border:2px solid #ddd;border-radius:10px;padding:10px;background:#fff;cursor:pointer;text-align:center;font-weight:bold}
+.theme-option.active{border-color:#111;box-shadow:0 0 0 2px rgba(0,0,0,.08)}
+.theme-swatch{height:35px;border-radius:7px;margin-bottom:7px}
+.custom-theme-box{margin:15px 0;padding:16px;border:1px solid #e2e2e2;border-radius:10px;background:#fafafa}
+.theme-color-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #eee}
+.theme-color-row:last-child{border-bottom:0}
+.theme-color-controls{display:flex;gap:8px;align-items:center}
+.theme-color-controls input[type=color]{width:48px;height:40px;padding:2px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}
+.theme-color-controls input[type=text]{flex:1;padding:9px;border:1px solid #ddd;border-radius:5px;font-family:Arial,sans-serif;direction:ltr}
+@media(max-width:700px){.theme-preview-grid{grid-template-columns:repeat(2,1fr)}.theme-color-row{grid-template-columns:1fr}.theme-color-controls{width:100%}}
+</style>
 </head>
 
 
@@ -4023,10 +4094,11 @@ function displayProducts(products = getProducts()){
             discount = Math.round(((Number(product.oldPrice)-Number(product.price))/Number(product.oldPrice))*100);
         }
         const image = escapeHtml(product.image || "");
-        const name = escapeHtml(product.name || "");
-        const description = escapeHtml(product.description || "");
+        const name = escapeHtml(productDisplayName(product));
+        const description = escapeHtml(productDisplayDescription(product));
         const id = Number(product.id);
-        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="price"><span class="new-price">Rs. ${Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${Number.isFinite(id)?id:0})">کارٹ میں شامل کریں</button></div></div>`;
+        const addText = document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
+        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="price"><span class="new-price">Rs. ${Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${Number.isFinite(id)?id:0})">${addText}</button></div></div>`;
     }).join("");
     grid.innerHTML = html;
     if(number) number.textContent = products.length + " Products";
@@ -5745,7 +5817,12 @@ function setLanguage(lang){
     localStorage.setItem('tahirOnlineLanguage',normalized);
     document.querySelectorAll('#langUr,#adminLangUr').forEach(b=>b.classList.toggle('active',normalized==='ur'));
     document.querySelectorAll('#langEn,#adminLangEn').forEach(b=>b.classList.toggle('active',normalized==='en'));
+    /* Re-render every dynamic section that has language-dependent content. */
     translateStaticText(document.body, normalized);
+    if(typeof renderDynamicCategories === 'function'){
+        renderDynamicCategories();
+    }
+    if(typeof loadCategoryImageSettings === 'function' && document.getElementById('settingsAdmin')?.classList.contains('active')) loadCategoryImageSettings();
     applyUrduFont(document.body);
     renderHeroBanners();
     if(typeof loadAdminSettings==='function' && document.getElementById('settingsAdmin')?.classList.contains('active')) loadAdminSettings();
@@ -5883,9 +5960,56 @@ function activeCategories(){
   return siteCategories.filter(c=>c.active!==false).sort((a,b)=>Number(a.order||999)-Number(b.order||999));
 }
 function categoryById(id){ return siteCategories.find(c=>String(c.id)===String(id)); }
+const CATEGORY_EN_FALLBACKS = {
+  "پرفیوم":"Perfumes",
+  "پریمیم پرفیوم":"Premium Perfumes",
+  "عطر":"Attar",
+  "پریمیم عطر":"Premium Attar",
+  "عبایا":"Abayas",
+  "سٹالر":"Stoles",
+  "اسٹالر":"Stoles",
+  "چوڑیاں":"Bangles",
+  "کاسمیٹکس":"Cosmetics",
+  "میک اپ":"Makeup",
+  "خواتین کاسمیٹکس":"Women's Cosmetics",
+  "مردانہ پرفیوم":"Men's Perfumes",
+  "زنانہ پرفیوم":"Women's Perfumes",
+  "خواتین کے پرفیوم":"Women's Perfumes",
+  "گفٹ سیٹس":"Gift Sets",
+  "خوشبوئیں":"Fragrances",
+  "خوشبو":"Fragrance"
+};
+
 function catName(c){
-  return document.documentElement.lang==="en" ? (c?.nameEn||c?.name||"") : (c?.name||"");
+  if(document.documentElement.lang !== "en") return c?.name || "";
+  const english = String(c?.nameEn || c?.englishName || "").trim();
+  if(english) return english;
+  const urdu = String(c?.name || "").trim();
+  return CATEGORY_EN_FALLBACKS[urdu] || (hasUrduChars(urdu) ? "Category" : urdu);
 }
+
+const CATEGORY_SECTION_DESCRIPTION_UR = "اس کیٹیگری کی نئی اور خوبصورت کلیکشن دیکھیں۔";
+const CATEGORY_SECTION_DESCRIPTION_EN = "Explore the latest collection in this category.";
+function categorySectionDescription(){
+  return document.documentElement.lang === "en" ? CATEGORY_SECTION_DESCRIPTION_EN : CATEGORY_SECTION_DESCRIPTION_UR;
+}
+
+function categoryEmptyText(){
+  return document.documentElement.lang === "en"
+    ? "No products added yet."
+    : "اس کیٹیگری میں ابھی کوئی پروڈکٹ شامل نہیں۔";
+}
+
+function productDisplayName(product){
+  if(document.documentElement.lang === "en") return product?.nameEn || product?.name || "";
+  return product?.name || "";
+}
+
+function productDisplayDescription(product){
+  if(document.documentElement.lang === "en") return product?.descriptionEn || product?.description || "";
+  return product?.description || "";
+}
+
 function renderDynamicCategories(){
   const box=document.querySelector("#categories .categories");
   if(box){
@@ -5913,26 +6037,29 @@ function renderDynamicCategories(){
         <div class="category-shop-banner" style="background-image:url('${escapeCssUrl(c.bannerImage||c.image||"")}')">
           <div class="category-shop-banner-content">
             <h2>${escapeHtml(catName(c))}</h2>
-            <p>${document.documentElement.lang==="en" ? "Explore the latest collection in this category." : "اس کیٹیگری کی نئی اور خوبصورت کلیکشن دیکھیں۔"}</p>
+            <p>${escapeHtml(categorySectionDescription())}</p>
           </div>
         </div>
         <div class="category-shop-products">
-          ${list.length ? list.map(categoryProductCard).join("") : `<div style="grid-column:1/-1;text-align:center;padding:25px;color:#777">${document.documentElement.lang==="en"?"No products added yet.":"اس کیٹیگری میں ابھی کوئی پروڈکٹ شامل نہیں۔"}</div>`}
+          ${list.length ? list.map(categoryProductCard).join("") : `<div style="grid-column:1/-1;text-align:center;padding:25px;color:#777">${escapeHtml(categoryEmptyText())}</div>`}
         </div>
       </section>`;
   }).join("");
 }
 function categoryProductCard(product){
   const discount=product.oldPrice&&product.oldPrice>product.price?Math.round((product.oldPrice-product.price)/product.oldPrice*100):0;
+  const name=productDisplayName(product);
+  const description=productDisplayDescription(product);
+  const addText=document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
   return `<div class="product">
     ${discount?`<span class="sale">-${discount}%</span>`:""}
-    <img class="category-mini-image" src="${escapeHtml(product.image||"")}" alt="${escapeHtml(product.name)}">
+    <img class="category-mini-image" src="${escapeHtml(product.image||"")}" alt="${escapeHtml(name)}">
     <div class="product-info">
       <div class="stars">★★★★★</div>
-      <div class="product-name">${escapeHtml(product.name)}</div>
-      <div class="product-desc">${escapeHtml(product.description||"")}</div>
+      <div class="product-name">${escapeHtml(name)}</div>
+      <div class="product-desc">${escapeHtml(description)}</div>
       <div class="price"><span class="new-price">Rs. ${Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div>
-      <button class="add-btn" onclick="addToCart(${JSON.stringify(product.id)})">کارٹ میں شامل کریں</button>
+      <button class="add-btn" onclick="addToCart(${JSON.stringify(product.id)})">${addText}</button>
     </div>
   </div>`;
 }
@@ -6346,6 +6473,140 @@ async function saveContactSettings(){
   }
 }
 
+
+/* =====================================================
+   THEME SETTINGS
+===================================================== */
+const DEFAULT_THEME_SETTINGS = { theme: "black-gold", custom: {primary:"#b98218",primaryDark:"#8e6311",header:"#0b0b0b",card:"#faf7f0",background:"#ffffff",text:"#111111"} };
+const THEME_OPTIONS = [
+  {id:"black-gold", name:"Black & Gold", swatch:"linear-gradient(135deg,#0b0b0b 50%,#b98218 50%)"},
+  {id:"royal-blue", name:"Royal Blue", swatch:"linear-gradient(135deg,#0b1526 50%,#2457a6 50%)"},
+  {id:"emerald", name:"Emerald", swatch:"linear-gradient(135deg,#071b15 50%,#177d5c 50%)"},
+  {id:"maroon", name:"Maroon", swatch:"linear-gradient(135deg,#210b10 50%,#8b2635 50%)"},
+  {id:"custom", name:"Custom Color", swatch:"linear-gradient(135deg,#111 50%,#b98218 50%)"}
+];
+function sanitizeHex(value,fallback){
+  const v=String(value||"").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v)?v:fallback;
+}
+function getStoredCustomTheme(){
+  try{
+    const data=JSON.parse(localStorage.getItem("tahirOnlineCustomTheme")||"null");
+    if(data&&typeof data==="object") return {...DEFAULT_THEME_SETTINGS.custom,...data};
+  }catch(e){}
+  return {...DEFAULT_THEME_SETTINGS.custom};
+}
+function applyCustomTheme(custom){
+  const c={...DEFAULT_THEME_SETTINGS.custom,...(custom||{})};
+  document.documentElement.style.setProperty("--theme-primary",sanitizeHex(c.primary,DEFAULT_THEME_SETTINGS.custom.primary));
+  document.documentElement.style.setProperty("--theme-primary-dark",sanitizeHex(c.primaryDark,DEFAULT_THEME_SETTINGS.custom.primaryDark));
+  document.documentElement.style.setProperty("--theme-header",sanitizeHex(c.header,DEFAULT_THEME_SETTINGS.custom.header));
+  document.documentElement.style.setProperty("--theme-card",sanitizeHex(c.card,DEFAULT_THEME_SETTINGS.custom.card));
+  document.documentElement.style.setProperty("--theme-bg",sanitizeHex(c.background,DEFAULT_THEME_SETTINGS.custom.background));
+  document.documentElement.style.setProperty("--theme-text",sanitizeHex(c.text,DEFAULT_THEME_SETTINGS.custom.text));
+  localStorage.setItem("tahirOnlineCustomTheme",JSON.stringify(c));
+}
+function applySiteTheme(theme,custom){
+  const valid=THEME_OPTIONS.some(t=>t.id===theme)?theme:"black-gold";
+  document.documentElement.setAttribute("data-theme",valid);
+  if(valid==="custom") applyCustomTheme(custom||getStoredCustomTheme());
+  localStorage.setItem("tahirOnlineTheme",valid);
+  document.querySelectorAll(".theme-option").forEach(el=>el.classList.toggle("active",el.dataset.theme===valid));
+}
+async function loadThemeSettings(){
+  let theme=localStorage.getItem("tahirOnlineTheme")||DEFAULT_THEME_SETTINGS.theme;
+  let custom=getStoredCustomTheme();
+  applySiteTheme(theme,custom);
+  try{
+    const data=await firebaseGet(FIREBASE_SETTINGS+"/theme");
+    if(data && typeof data === "object"){
+      if(data.theme) theme=String(data.theme);
+      if(data.custom && typeof data.custom === "object") custom={...custom,...data.custom};
+    }else if(typeof data === "string") theme=data;
+  }catch(e){ console.warn("Theme settings load failed:",e); }
+  applySiteTheme(theme,custom);
+  const select=document.getElementById("adminThemeSelect");
+  if(select) select.value=theme;
+  setThemeInputs(custom);
+  return {theme,custom};
+}
+function themeColorRow(id,label,value){
+  return `<div class="theme-color-row"><label for="${id}">${label}</label><div class="theme-color-controls"><input id="${id}" type="color" value="${sanitizeHex(value,"#000000")}" onchange="syncThemeHex('${id}')"><input id="${id}Hex" type="text" value="${sanitizeHex(value,"#000000")}" maxlength="7" inputmode="text" oninput="syncThemeColor('${id}')" placeholder="#000000"></div></div>`;
+}
+function themeSettingsHTML(theme){
+  const active=THEME_OPTIONS.some(t=>t.id===theme)?theme:DEFAULT_THEME_SETTINGS.theme;
+  const custom=getStoredCustomTheme();
+  return `<div class="banner-form" id="themeSettingsWrap" style="max-width:900px">
+    <h3 style="margin-bottom:8px">ویب سائٹ کا تھیم</h3>
+    <p style="color:#777;margin-bottom:12px">ایڈمن تیار شدہ تھیم منتخب کرنے کے ساتھ اپنی مرضی کے رنگ بھی خود منتخب کر سکتا ہے۔</p>
+    <select id="adminThemeSelect" onchange="previewSiteTheme(this.value)" style="width:100%;padding:11px;border:1px solid #ddd;border-radius:5px">
+      ${THEME_OPTIONS.map(t=>`<option value="${t.id}" ${t.id===active?"selected":""}>${t.name}</option>`).join("")}
+    </select>
+    <div class="theme-preview-grid">${THEME_OPTIONS.map(t=>`<button type="button" class="theme-option ${t.id===active?"active":""}" data-theme="${t.id}" onclick="previewSiteTheme('${t.id}')"><div class="theme-swatch" style="background:${t.swatch}"></div>${t.name}</button>`).join("")}</div>
+    <div class="custom-theme-box" id="customThemeBox">
+      <h4 style="margin-bottom:8px">اپنے رنگ منتخب کریں</h4>
+      <p style="color:#777;margin-bottom:12px">ہر رنگ کے سامنے color picker یا HEX code استعمال کریں۔</p>
+      ${themeColorRow("themePrimaryColor","مین کلر",custom.primary)}
+      ${themeColorRow("themePrimaryDarkColor","Hover / Dark کلر",custom.primaryDark)}
+      ${themeColorRow("themeHeaderColor","Header / Footer کلر",custom.header)}
+      ${themeColorRow("themeCardColor","Card / Section کلر",custom.card)}
+      ${themeColorRow("themeBackgroundColor","Background کلر",custom.background)}
+      ${themeColorRow("themeTextColor","Text کلر",custom.text)}
+      <button class="gold-btn" type="button" onclick="previewCustomTheme()" style="margin-top:10px">رنگوں کا Preview</button>
+    </div>
+    <button class="gold-btn" type="button" onclick="saveThemeSettings()">تھیم محفوظ کریں</button>
+    <div id="themeSettingsStatus" class="save-status"></div>
+  </div>`;
+}
+function setThemeInputs(c){
+  const map={themePrimaryColor:c.primary,themePrimaryDarkColor:c.primaryDark,themeHeaderColor:c.header,themeCardColor:c.card,themeBackgroundColor:c.background,themeTextColor:c.text};
+  Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);const hx=document.getElementById(id+"Hex");if(el)el.value=sanitizeHex(val,"#000000");if(hx)hx.value=sanitizeHex(val,"#000000");});
+}
+function readCustomThemeInputs(){
+  return {
+    primary:sanitizeHex(document.getElementById("themePrimaryColor")?.value,DEFAULT_THEME_SETTINGS.custom.primary),
+    primaryDark:sanitizeHex(document.getElementById("themePrimaryDarkColor")?.value,DEFAULT_THEME_SETTINGS.custom.primaryDark),
+    header:sanitizeHex(document.getElementById("themeHeaderColor")?.value,DEFAULT_THEME_SETTINGS.custom.header),
+    card:sanitizeHex(document.getElementById("themeCardColor")?.value,DEFAULT_THEME_SETTINGS.custom.card),
+    background:sanitizeHex(document.getElementById("themeBackgroundColor")?.value,DEFAULT_THEME_SETTINGS.custom.background),
+    text:sanitizeHex(document.getElementById("themeTextColor")?.value,DEFAULT_THEME_SETTINGS.custom.text)
+  };
+}
+function syncThemeHex(id){
+  const c=document.getElementById(id),h=document.getElementById(id+"Hex");if(c&&h)h.value=c.value;
+  previewCustomTheme(false);
+}
+function syncThemeColor(id){
+  const h=document.getElementById(id+"Hex"),c=document.getElementById(id);
+  if(h&&c&&/^#[0-9a-fA-F]{6}$/.test(h.value.trim())) c.value=h.value.trim();
+  previewCustomTheme(false);
+}
+function previewCustomTheme(showMessage=true){
+  const custom=readCustomThemeInputs();
+  applySiteTheme("custom",custom);
+  const select=document.getElementById("adminThemeSelect");if(select)select.value="custom";
+  if(showMessage){const status=document.getElementById("themeSettingsStatus");if(status)status.textContent="✓ Custom رنگ Preview ہوگیا۔";}
+}
+function previewSiteTheme(theme){
+  if(theme==="custom"){
+    previewCustomTheme(false);
+  }else{
+    applySiteTheme(theme);
+  }
+  const select=document.getElementById("adminThemeSelect");if(select)select.value=theme;
+}
+async function saveThemeSettings(){
+  let theme=document.getElementById("adminThemeSelect")?.value||DEFAULT_THEME_SETTINGS.theme;
+  const custom=readCustomThemeInputs();
+  if(theme==="custom") applySiteTheme("custom",custom); else applySiteTheme(theme,custom);
+  const result=await firebasePut(FIREBASE_SETTINGS+"/theme",{theme,custom});
+  const status=document.getElementById("themeSettingsStatus");
+  if(result===null){ if(status) status.textContent="تھیم محفوظ نہیں ہوئی۔"; return; }
+  localStorage.setItem("tahirOnlineCustomTheme",JSON.stringify(custom));
+  applySiteTheme(theme,custom);
+  if(status){status.textContent="✓ تھیم اور رنگ کامیابی سے محفوظ ہوگئے۔";setTimeout(()=>status.textContent="",3000);}
+}
+
 function installAdminExtensions(){
   const tabs=document.querySelector(".admin-tabs");
   if(tabs && !document.getElementById("categoriesAdminTab")){
@@ -6354,6 +6615,11 @@ function installAdminExtensions(){
   }
   const settings=document.getElementById("settingsAdmin");
 
+  if(settings && !document.getElementById("themeSettingsWrap")){
+    const themeWrap=document.createElement("div");
+    themeWrap.innerHTML=themeSettingsHTML(localStorage.getItem("tahirOnlineTheme")||DEFAULT_THEME_SETTINGS.theme);
+    settings.insertBefore(themeWrap.firstElementChild, settings.firstElementChild);
+  }
   if(settings && !document.getElementById("contactSettingsWrap")){
     const contactWrap=document.createElement("div");
     contactWrap.id="contactSettingsWrap";
@@ -6421,6 +6687,7 @@ async function openAdminPanel(){
   await loadAdminDashboard();
   await loadCategoriesFromFirebase();
   loadAdminCategories();
+  await loadThemeSettings();
   await loadContactSettings();
   const s=await loadPaymentSettings();
   const content=document.getElementById("paymentSettingsContent");if(content)content.innerHTML=paymentSettingsHTML(s);
@@ -6429,6 +6696,7 @@ async function openAdminPanel(){
 async function loadAdminSettings(){
   await loadAboutStoreImage();
   installAdminExtensions();
+  await loadThemeSettings();
   await loadContactSettings();
   const s=await loadPaymentSettings();
   const content=document.getElementById("paymentSettingsContent");if(content)content.innerHTML=paymentSettingsHTML(s);
@@ -6539,29 +6807,17 @@ setTimeout(async()=>{
   installAdminExtensions();
   await loadCategoriesFromFirebase();
   await loadPaymentSettings();
+  await loadThemeSettings();
+  await loadContactSettings();
 },100);
+
+// Safe initial theme load after all theme constants and functions exist.
+applySiteTheme(localStorage.getItem("tahirOnlineTheme") || DEFAULT_THEME_SETTINGS.theme);
+loadThemeSettings();
 
 </script>
 
 </body>
 </html>
 
-<style>
 
-/* Store logo: ALWAYS English in both Urdu and English modes */
-.logo .store-brand-ur,
-.premium-logo .store-brand-ur,
-.header .store-brand-ur,
-.store-brand-ur {
-    display: none !important;
-}
-.logo .store-brand-en,
-.premium-logo .store-brand-en,
-.header .store-brand-en,
-.store-brand-en {
-    display: inline !important;
-    font-family: Arial, sans-serif !important;
-    text-transform: uppercase !important;
-}
-
-</style>
