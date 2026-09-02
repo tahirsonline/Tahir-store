@@ -4,12 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preload" href="https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff" as="font" type="font/woff" crossorigin>
 
 <title>TAHIR ONLINE STORE</title>
 
 <style>
-
-@import url("https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap");
 
 /* =====================================================
    WEB FONT — JAMEEL NOORI NASTALEEQ
@@ -20,17 +19,26 @@
     font-family:"JameelNooriNastaleeqWeb";
     src:url("https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff") format("woff");
     font-style:normal;
-    font-weight:400 900;
-    font-display:swap;
+    font-weight:400;
+    font-display:block;
+}
+
+@font-face{
+    font-family:"JameelNooriNastaleeqWeb";
+    src:url("https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff") format("woff");
+    font-style:normal;
+    font-weight:700;
+    font-display:block;
 }
 
 /* ہر اردو لفظ/جملے کے لیے لازمی Jameel Noori Nastaleeq */
 .urdu-font-force{
-    font-family:"JameelNooriNastaleeqWeb","Jameel Noori Nastaleeq","Jameel Noori","Noto Nastaliq Urdu",serif !important;
+    font-family:"JameelNooriNastaleeqWeb",serif !important;
     font-style:normal !important;
     font-variant-ligatures:normal !important;
     font-feature-settings:normal !important;
     font-synthesis:none !important;
+    text-rendering:optimizeLegibility !important;
 }
 
 /* =====================================================
@@ -38,11 +46,7 @@
 ===================================================== */
 
 :root{
-    --urdu-font:
-        "Jameel Noori Nastaleeq",
-        "Jameel Noori",
-        "Noto Nastaliq Urdu",
-        serif;
+    --urdu-font:"JameelNooriNastaleeqWeb", serif;
 
     --english-font: Arial, sans-serif;
 
@@ -71,6 +75,21 @@ body{
     color:#111;
     font-family:var(--urdu-font);
     line-height:1.8;
+}
+
+html[lang="ur"] body,
+html[lang="ur"] body *{
+    font-family:"JameelNooriNastaleeqWeb", serif !important;
+}
+
+html[lang="ur"] input[type="number"],
+html[lang="ur"] input[type="tel"],
+html[lang="ur"] input[type="email"],
+html[lang="ur"] input[type="password"],
+html[lang="ur"] .english,
+html[lang="ur"] .price,
+html[lang="ur"] .admin-number{
+    font-family:var(--english-font) !important;
 }
 
 html[lang="en"] body,
@@ -121,7 +140,14 @@ html[lang="en"] .price{
     color:#fff;
 }
 @media(max-width:650px){
-    body{font-size:15px;}
+    body{
+        font-size:15px;
+        -webkit-font-smoothing:antialiased;
+        text-rendering:optimizeLegibility;
+    }
+    html[lang="ur"] body{
+        font-family:"JameelNooriNastaleeqWeb",serif;
+    }
     .language-switch button{padding:5px 7px;font-size:11px;}
     .nav-inner{gap:18px;}
     .nav-inner a{font-size:14px;}
@@ -195,7 +221,7 @@ header{
 
 /* Premium bilingual store brand */
 .store-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;text-align:center}
-.store-brand-ur{font-family:"JameelNooriNastaleeqWeb","Jameel Noori Nastaleeq","Jameel Noori","Noto Nastaliq Urdu",serif;font-size:32px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.store-brand-ur{font-family:"JameelNooriNastaleeqWeb",serif;font-size:32px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
 .store-brand-en{font-family:Arial,sans-serif;font-size:16px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-top:5px;white-space:nowrap}
 @media(max-width:600px){.store-brand-ur{font-size:21px}.store-brand-en{font-size:10px;letter-spacing:1.8px}}
 .logo{
@@ -1599,11 +1625,11 @@ header{background:#0b0b0b;color:#fff;border-bottom:0;box-shadow:0 3px 18px rgba(
 .brand-logo-mark{width:58px;height:58px;display:inline-flex;align-items:center;justify-content:center;color:#d8ad4a;flex:0 0 58px}
 .brand-logo-mark svg{width:58px;height:58px;display:block}
 .premium-logo .store-brand{align-items:flex-start;text-align:left;line-height:1}
-.premium-logo .store-brand-ur{font-family:"JameelNooriNastaleeqWeb","Jameel Noori Nastaleeq","Jameel Noori","Noto Nastaliq Urdu",serif;font-size:30px;font-variant-ligatures:normal;font-feature-settings:normal;font-synthesis:none;color:#f0cf73;line-height:1.35;white-space:nowrap}
+.premium-logo .store-brand-ur{font-family:"JameelNooriNastaleeqWeb",serif;font-size:30px;font-variant-ligatures:normal;font-feature-settings:normal;font-synthesis:none;color:#f0cf73;line-height:1.35;white-space:nowrap}
 .premium-logo .store-brand-en{font-family:Arial,sans-serif;font-size:18px;letter-spacing:3.2px;font-weight:900;color:#fff;margin-top:2px;white-space:nowrap}
 html[lang="ur"] .premium-logo .store-brand-ur{
     display:inline!important;
-    font-family:"JameelNooriNastaleeqWeb","Jameel Noori Nastaleeq","Jameel Noori","Noto Nastaliq Urdu",serif!important;
+    font-family:"JameelNooriNastaleeqWeb",serif!important;
     font-variant-ligatures:normal;
     font-feature-settings:normal;
 }
@@ -2111,10 +2137,11 @@ Premium perfumes اور attars کا قابل اعتماد
 <li>
 
 <a
+    id="contactPhoneLink"
     href="tel:03142300764"
     class="english">
 
-📞 03142300764
+📞 <span id="contactPhoneText">03142300764</span>
 
 </a>
 
@@ -2129,10 +2156,11 @@ Premium perfumes اور attars کا قابل اعتماد
 <li>
 
 <a
+    id="contactEmailLink"
     href="mailto:tahirnaeemtahir123@gmail.com"
     class="english">
 
-✉️ tahirnaeemtahir123@gmail.com
+✉️ <span id="contactEmailText">tahirnaeemtahir123@gmail.com</span>
 
 </a>
 
@@ -2160,6 +2188,7 @@ Premium perfumes اور attars کا قابل اعتماد
 ===================================================== -->
 
 <a
+    id="whatsappContactLink"
     class="whatsapp"
     href="https://wa.me/923142300764"
     target="_blank">
@@ -3532,12 +3561,16 @@ async function loadBannersFromFirebase(){
 
     const oldBanners = getBannersLocal();
     const bannersChanged = JSON.stringify(oldBanners) !== JSON.stringify(banners);
+
     if(bannersChanged){
         saveBannersLocal(banners);
         currentBannerIndex = 0;
-        renderHeroBanners();
-        loadAdminBanners();
     }
+
+    /* Always render after the first Firebase/local load. */
+    renderHeroBanners();
+    loadAdminBanners();
+
     return banners;
 }
 
@@ -5712,8 +5745,9 @@ function setLanguage(lang){
     localStorage.setItem('tahirOnlineLanguage',normalized);
     document.querySelectorAll('#langUr,#adminLangUr').forEach(b=>b.classList.toggle('active',normalized==='ur'));
     document.querySelectorAll('#langEn,#adminLangEn').forEach(b=>b.classList.toggle('active',normalized==='en'));
-    renderHeroBanners();
     translateStaticText(document.body, normalized);
+    applyUrduFont(document.body);
+    renderHeroBanners();
     if(typeof loadAdminSettings==='function' && document.getElementById('settingsAdmin')?.classList.contains('active')) loadAdminSettings();
 }
 
@@ -5736,12 +5770,35 @@ function startLanguageObserver(){
 }
 
 /* =====================================================
+   URDU FONT READY HANDLER
+===================================================== */
+async function ensureUrduFontReady(){
+  try{
+    if(document.fonts && document.fonts.load){
+      await document.fonts.load('400 16px "JameelNooriNastaleeqWeb"');
+      await document.fonts.ready;
+    }
+  }catch(error){
+    console.warn("Urdu webfont load warning:", error);
+  }
+  applyUrduFont(document.body);
+  renderHeroBanners();
+}
+
+/* =====================================================
    INITIALIZE
 ===================================================== */
 
 initLanguage();
 startLanguageObserver();
+
+/* Show cached banners immediately; do not wait for language switching. */
+banners = getBannersLocal();
+currentBannerIndex = 0;
 translateStaticText(document.body, document.documentElement.lang);
+applyUrduFont(document.body);
+renderHeroBanners();
+ensureUrduFontReady();
 
 /* Local cache is shown immediately while Firebase loads. */
 displayProducts(getProducts());
@@ -5751,6 +5808,7 @@ updateCart();
 syncProductsFromFirebase();
 syncBannersFromFirebase();
 loadAboutStoreImage();
+loadContactSettings();
 
 /* Firebase سے Orders */
 loadOrdersFromFirebase();
@@ -6180,6 +6238,114 @@ async function submitCheckout(){
 /* =====================================================
    ADMIN CATEGORY / PAYMENT TABS
    ===================================================== */
+/* =====================================================
+   CONTACT INFORMATION SETTINGS
+===================================================== */
+const DEFAULT_CONTACT_SETTINGS = {
+  phone: "03142300764",
+  email: "tahirnaeemtahir123@gmail.com"
+};
+
+async function loadContactSettings(){
+  let settings = null;
+
+  try{
+    const data = await firebaseGet(FIREBASE_SETTINGS + "/contact");
+    if(data && typeof data === "object"){
+      settings = {
+        phone: String(data.phone || DEFAULT_CONTACT_SETTINGS.phone),
+        email: String(data.email || DEFAULT_CONTACT_SETTINGS.email)
+      };
+    }
+  }catch(error){
+    console.warn("Contact settings load failed:", error);
+  }
+
+  if(!settings){
+    try{
+      const local = JSON.parse(localStorage.getItem("tahirOnlineContactSettings") || "null");
+      settings = local && typeof local === "object"
+        ? {
+            phone: String(local.phone || DEFAULT_CONTACT_SETTINGS.phone),
+            email: String(local.email || DEFAULT_CONTACT_SETTINGS.email)
+          }
+        : {...DEFAULT_CONTACT_SETTINGS};
+    }catch(error){
+      settings = {...DEFAULT_CONTACT_SETTINGS};
+    }
+  }
+
+  localStorage.setItem("tahirOnlineContactSettings", JSON.stringify(settings));
+  applyContactSettings(settings);
+
+  const phoneInput = document.getElementById("adminContactPhone");
+  const emailInput = document.getElementById("adminContactEmail");
+  if(phoneInput) phoneInput.value = settings.phone;
+  if(emailInput) emailInput.value = settings.email;
+
+  return settings;
+}
+
+function normalizeWhatsAppNumber(phone){
+  let value = String(phone || "").replace(/[^\d+]/g, "");
+  if(value.startsWith("0")) value = "92" + value.slice(1);
+  return value.replace(/^\+/, "");
+}
+
+function applyContactSettings(settings){
+  const phone = String(settings?.phone || DEFAULT_CONTACT_SETTINGS.phone);
+  const email = String(settings?.email || DEFAULT_CONTACT_SETTINGS.email);
+
+  const phoneText = document.getElementById("contactPhoneText");
+  const phoneLink = document.getElementById("contactPhoneLink");
+  const emailText = document.getElementById("contactEmailText");
+  const emailLink = document.getElementById("contactEmailLink");
+  const whatsappLink = document.getElementById("whatsappContactLink");
+
+  if(phoneText) phoneText.textContent = phone;
+  if(phoneLink) phoneLink.href = "tel:" + phone.replace(/[^\d+]/g, "");
+  if(emailText) emailText.textContent = email;
+  if(emailLink) emailLink.href = "mailto:" + email;
+
+  const wa = normalizeWhatsAppNumber(phone);
+  if(whatsappLink && wa) whatsappLink.href = "https://wa.me/" + wa;
+}
+
+async function saveContactSettings(){
+  const phoneInput = document.getElementById("adminContactPhone");
+  const emailInput = document.getElementById("adminContactEmail");
+  const status = document.getElementById("contactSettingsStatus");
+
+  const phone = phoneInput?.value.trim() || "";
+  const email = emailInput?.value.trim() || "";
+
+  if(!phone){
+    alert("براہ کرم فون نمبر درج کریں۔");
+    return;
+  }
+
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert("براہ کرم درست Email ID درج کریں۔");
+    return;
+  }
+
+  const settings = {phone, email};
+  const result = await firebasePut(FIREBASE_SETTINGS + "/contact", settings);
+
+  if(result === null){
+    if(status) status.textContent = "رابطہ کی معلومات محفوظ نہیں ہوئیں۔";
+    return;
+  }
+
+  localStorage.setItem("tahirOnlineContactSettings", JSON.stringify(settings));
+  applyContactSettings(settings);
+
+  if(status){
+    status.textContent = "✓ فون نمبر اور Email ID کامیابی سے محفوظ ہو گئی۔";
+    setTimeout(()=>status.textContent="",3000);
+  }
+}
+
 function installAdminExtensions(){
   const tabs=document.querySelector(".admin-tabs");
   if(tabs && !document.getElementById("categoriesAdminTab")){
@@ -6187,6 +6353,33 @@ function installAdminExtensions(){
     tabs.appendChild(b);
   }
   const settings=document.getElementById("settingsAdmin");
+
+  if(settings && !document.getElementById("contactSettingsWrap")){
+    const contactWrap=document.createElement("div");
+    contactWrap.id="contactSettingsWrap";
+    contactWrap.className="banner-form";
+    contactWrap.style.maxWidth="900px";
+    contactWrap.innerHTML=`
+      <h3 style="margin-bottom:8px">رابطہ کی معلومات</h3>
+      <p style="color:#777;margin-bottom:15px">
+        یہاں سے Admin ویب سائٹ کا موبائل نمبر اور Email ID تبدیل کر سکتا ہے۔
+      </p>
+      <div class="checkout-grid">
+        <div class="form-group">
+          <label>موبائل / فون نمبر</label>
+          <input id="adminContactPhone" type="tel" class="english" placeholder="03XXXXXXXXX">
+        </div>
+        <div class="form-group">
+          <label>Email ID</label>
+          <input id="adminContactEmail" type="email" class="english" placeholder="example@email.com">
+        </div>
+      </div>
+      <button class="gold-btn" type="button" onclick="saveContactSettings()">رابطہ کی معلومات محفوظ کریں</button>
+      <div id="contactSettingsStatus" class="save-status"></div>
+    `;
+    settings.appendChild(contactWrap);
+  }
+
   if(settings && !document.getElementById("paymentSettingsWrap")){
     const wrap=document.createElement("div");wrap.id="paymentSettingsWrap";wrap.innerHTML="<h2 style='margin:25px 0 15px'>ادائیگی کی سیٹنگز</h2><div id='paymentSettingsContent'></div>";
     settings.appendChild(wrap);
@@ -6228,6 +6421,7 @@ async function openAdminPanel(){
   await loadAdminDashboard();
   await loadCategoriesFromFirebase();
   loadAdminCategories();
+  await loadContactSettings();
   const s=await loadPaymentSettings();
   const content=document.getElementById("paymentSettingsContent");if(content)content.innerHTML=paymentSettingsHTML(s);
   loadCategoryImageSettings();
@@ -6235,6 +6429,7 @@ async function openAdminPanel(){
 async function loadAdminSettings(){
   await loadAboutStoreImage();
   installAdminExtensions();
+  await loadContactSettings();
   const s=await loadPaymentSettings();
   const content=document.getElementById("paymentSettingsContent");if(content)content.innerHTML=paymentSettingsHTML(s);
   loadCategoryImageSettings();
@@ -6294,7 +6489,7 @@ function printOrder(orderId){
   const o=orders.find(x=>x.id===orderId);if(!o)return;
   const sheet=document.getElementById("printOrderSheet")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"printOrderSheet"}));
   sheet.innerHTML=`<div style="direction:rtl;font-family:Arial,sans-serif;padding:20px">
-    <h1 style="text-align:center;font-size:28px"><span style="font-family:'Jameel Noori Nastaleeq',local('Jameel Noori Nastaleeq'),'Noto Nastaliq Urdu',serif">طاہر آن لائن سٹور</span><br><small style="font-family:Arial,sans-serif;letter-spacing:3px">TAHIR ONLINE STORE</small></h1>
+    <h1 style="text-align:center;font-size:28px"><span style="font-family:"JameelNooriNastaleeqWeb",serif">طاہر آن لائن سٹور</span><br><small style="font-family:Arial,sans-serif;letter-spacing:3px">TAHIR ONLINE STORE</small></h1>
     <h2 style="text-align:center">پارسل / آرڈر سلپ</h2>
     <hr>
     <p><strong>Order ID:</strong> ${escapeHtml(o.id)}</p>
