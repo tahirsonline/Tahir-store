@@ -1607,6 +1607,17 @@ footer li a:hover{
 }
 #printOrderSheet{display:none}
 
+/* PERFUME SIZE / PASSWORD SETTINGS */
+.size-options{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 10px;direction:ltr}
+.size-option{border:1px solid #d8c18b;background:#fffaf0;border-radius:6px;padding:6px 9px;font-family:Arial,sans-serif;font-size:12px;cursor:pointer}
+.size-option.active{background:#111;color:#fff;border-color:#111}
+.size-price-list{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;font-family:Arial,sans-serif;direction:ltr}
+.size-price-chip{border:1px solid #eee;border-radius:5px;padding:4px 7px;font-size:11px;background:#fafafa}
+.variant-price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.variant-price-box{border:1px solid #e5e5e5;border-radius:7px;padding:10px;background:#fafafa}
+.variant-price-box label{display:block;font-weight:bold;margin-bottom:5px}
+@media(max-width:650px){.variant-price-grid{grid-template-columns:1fr 1fr}}
+
 /* =====================================================
    PREMIUM BLACK + GOLD STORE THEME
 ===================================================== */
@@ -2502,17 +2513,20 @@ Category
 
 
 <div class="form-group">
-
-<label>
-Price
+<label>بنیادی Price (Compatibility)r/>\small>30ml نہ ہو تو سب سے پہلی دستیاب size کی قیمت استعمال ہوگی۔</small>
 </label>
+<input id="editProductPrice" type="number" class="english">
+</div>
 
-<input
-    id="editProductPrice"
-    type="number"
-    class="english"
->
-
+<div class="form-group">
+<label>پرفیوم Size Wise Prices</label>
+<div class="variant-price-grid">
+  <div class="variant-price-box"><label>10ml</label><input id="editPrice10" type="number" class="english" placeholder="10ml price"></div>
+  <div class="variant-price-box"><label>30ml</label><input id="editPrice30" type="number" class="english" placeholder="30ml price"></div>
+  <div class="variant-price-box"><label>50ml</label><input id="editPrice50" type="number" class="english" placeholder="50ml price"></div>
+  <div class="variant-price-box"><label>100ml</label><input id="editPrice100" type="number" class="english" placeholder="100ml price"></div>
+</div>
+<small style="color:#777">صرف جس size کی قیمت موجود ہو گی وہ customer کو نظر آئے گی۔</small>
 </div>
 
 
@@ -2936,18 +2950,19 @@ Category
 
 
 <div class="form-group">
+<label>بنیادی Price (Compatibility)</label>
+<input id="newProductPrice" type="number" placeholder="مثلاً 2500" class="english">
+</div>
 
-<label>
-Price
-</label>
-
-<input
-    id="newProductPrice"
-    type="number"
-    placeholder="2400"
-    class="english"
->
-
+<div class="form-group">
+<label>پرفیوم Size Wise Prices</label>
+<div class="variant-price-grid">
+  <div class="variant-price-box"><label>10ml</label><input id="newPrice10" type="number" class="english" placeholder="10ml price"></div>
+  <div class="variant-price-box"><label>30ml</label><input id="newPrice30" type="number" class="english" placeholder="30ml price"></div>
+  <div class="variant-price-box"><label>50ml</label><input id="newPrice50" type="number" class="english" placeholder="50ml price"></div>
+  <div class="variant-price-box"><label>100ml</label><input id="newPrice100" type="number" class="english" placeholder="100ml price"></div>
+</div>
+<small style="color:#777">مثلاً 10ml=1000، 30ml=2500، 50ml=3800، 100ml=6500</small>
 </div>
 
 
@@ -4079,6 +4094,27 @@ async function syncBannersFromFirebase(){
    DISPLAY PRODUCTS
 ===================================================== */
 
+function getProductPrices(product){
+  const raw=product?.prices||{};
+  const out={};
+  [10,30,50,100].forEach(ml=>{ const v=Number(raw[String(ml)]??raw[ml]); if(Number.isFinite(v)&&v>0) out[String(ml)]=v; });
+  if(!Object.keys(out).length && Number(product?.price)>0) out["30"]=Number(product.price);
+  return out;
+}
+function hasSizePrices(product){return Object.keys(getProductPrices(product)).length>0}
+function formatSizePrices(product){
+  const p=getProductPrices(product);
+  return Object.entries(p).map(([ml,price])=>`<span class="size-price-chip">${ml}ml: Rs. ${Number(price).toLocaleString()}</span>`).join("");
+}
+function chooseProductSize(productId){
+  const product=getProducts().find(x=>String(x.id)===String(productId)); if(!product)return null;
+  const prices=getProductPrices(product); const keys=Object.keys(prices);
+  if(keys.length===1)return keys[0];
+  const msg="Size منتخب کریں: " + keys.map((ml,i)=>`${i+1}) ${ml}ml — Rs. ${Number(prices[ml]).toLocaleString()}`).join(" | ");
+  const answer=prompt(msg,"1"); if(answer===null)return null;
+  const index=Math.max(0,Number(answer)-1); return keys[index]||null;
+}
+
 function displayProducts(products = getProducts()){
     const grid = document.getElementById("productGrid");
     const number = document.getElementById("productNumber");
@@ -4098,7 +4134,8 @@ function displayProducts(products = getProducts()){
         const description = escapeHtml(productDisplayDescription(product));
         const id = Number(product.id);
         const addText = document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
-        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="price"><span class="new-price">Rs. ${Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${Number.isFinite(id)?id:0})">${addText}</button></div></div>`;
+        const sizePrices=formatSizePrices(product);
+        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="size-price-list">${sizePrices}</div><div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${Number.isFinite(id)?id:0})">${addText}</button></div></div>`;
     }).join("");
     grid.innerHTML = html;
     if(number) number.textContent = products.length + " Products";
@@ -4141,43 +4178,17 @@ function saveCart(){
 
 
 function addToCart(productId){
-
-    const product =
-        getProducts().find(
-            item =>
-                Number(item.id) ===
-                Number(productId)
-        );
-
-    if(!product){
-        return;
-    }
-
-    const existing =
-        cart.find(
-            item =>
-                Number(item.id) ===
-                Number(productId)
-        );
-
-    if(existing){
-
-        existing.qty++;
-
-    }else{
-
-        cart.push({
-            ...product,
-            qty:1
-        });
-
-    }
-
-    saveCart();
-    updateCart();
-    openCart();
+  const product=getProducts().find(item=>Number(item.id)===Number(productId));
+  if(!product)return;
+  const size=chooseProductSize(productId);
+  if(!size)return;
+  const prices=getProductPrices(product);
+  const selectedPrice=Number(prices[size]||product.price||0);
+  const existing=cart.find(item=>Number(item.id)===Number(productId)&&String(item.ml||"")===String(size));
+  if(existing){existing.qty++;}
+  else{cart.push({...product,qty:1,ml:Number(size),price:selectedPrice,selectedPrice:selectedPrice});}
+  saveCart(); updateCart(); openCart();
 }
-
 
 function updateCart(){
 
@@ -4255,8 +4266,7 @@ function updateCart(){
                     </h4>
 
                     <p class="english">
-                        Rs.
-                        ${Number(item.price).toLocaleString()}
+                        ${item.ml?`${Number(item.ml)}ml — `:""}Rs. ${Number(item.price).toLocaleString()}
                     </p>
 
                     <div class="qty">
@@ -4602,8 +4612,8 @@ function filterProducts(
         products =
             products.filter(
                 product =>
-                    product.category ===
-                    category
+                    String(product.category||"").toLowerCase() ===
+                    String(category||"").toLowerCase()
             );
     }
 
@@ -4650,17 +4660,11 @@ function adminLogin(){
             .value;
 
 
-    /*
-        DEMO LOGIN
-
-        Username: admin
-        Password: 12345
-    */
-
+    const savedPassword = localStorage.getItem("tahirOnlineAdminPassword") || "12345";
 
     if(
         username === "admin" &&
-        password === "12345"
+        password === savedPassword
     ){
 
         localStorage.setItem(
@@ -5178,9 +5182,13 @@ async function addProduct(){
         .getElementById("newProductCategory")
         .value;
 
-    const price = Number(document
-        .getElementById("newProductPrice")
-        .value);
+    const price10 = Number(document.getElementById("newPrice10")?.value||0);
+    const price30 = Number(document.getElementById("newPrice30")?.value||0);
+    const price50 = Number(document.getElementById("newPrice50")?.value||0);
+    const price100 = Number(document.getElementById("newPrice100")?.value||0);
+    const price = Number(document.getElementById("newProductPrice").value) || price30 || price10 || price50 || price100;
+    const prices={};
+    if(price10>0)prices["10"]=price10; if(price30>0)prices["30"]=price30; if(price50>0)prices["50"]=price50; if(price100>0)prices["100"]=price100;
 
     const oldPrice = Number(document
         .getElementById("newProductOldPrice")
@@ -5196,7 +5204,7 @@ async function addProduct(){
         .trim();
 
     if(!name || !price || !imageFile){
-        alert("Product Name، Price اور Image لازمی ہیں۔");
+        alert("Product Name، کم از کم ایک Price اور Image لازمی ہیں۔");
         return;
     }
 
@@ -5223,6 +5231,7 @@ async function addProduct(){
             name: name,
             category: category,
             price: price,
+            prices: prices,
             oldPrice: oldPrice || "",
             image: e.target.result,
             description: description || "Premium خوشبو"
@@ -5240,6 +5249,7 @@ async function addProduct(){
 
         document.getElementById("newProductName").value = "";
         document.getElementById("newProductPrice").value = "";
+        ["newPrice10","newPrice30","newPrice50","newPrice100"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});
         document.getElementById("newProductOldPrice").value = "";
         document.getElementById("newProductImage").value = "";
         document.getElementById("newProductDescription").value = "";
@@ -5306,9 +5316,7 @@ function loadAdminProducts(){
 
                     <span class="english">
 
-                        Rs.
-                        ${Number(product.price)
-                            .toLocaleString()}
+                        ${hasSizePrices(product)?formatSizePrices(product):`Rs. ${Number(product.price).toLocaleString()}`}
 
                     </span>
 
@@ -5379,7 +5387,9 @@ function editProduct(index){
     document
         .getElementById("editProductPrice")
         .value =
-        product.price;
+        product.price || "";
+    const editPrices=getProductPrices(product);
+    [10,30,50,100].forEach(ml=>{const e=document.getElementById("editPrice"+ml);if(e)e.value=editPrices[String(ml)]||"";});
 
 
     document
@@ -5511,9 +5521,13 @@ async function updateProduct(){
         .getElementById("editProductCategory")
         .value;
 
-    const price = Number(document
-        .getElementById("editProductPrice")
-        .value);
+    const price10=Number(document.getElementById("editPrice10")?.value||0);
+    const price30=Number(document.getElementById("editPrice30")?.value||0);
+    const price50=Number(document.getElementById("editPrice50")?.value||0);
+    const price100=Number(document.getElementById("editPrice100")?.value||0);
+    const price = Number(document.getElementById("editProductPrice").value) || price30 || price10 || price50 || price100;
+    const prices={};
+    if(price10>0)prices["10"]=price10; if(price30>0)prices["30"]=price30; if(price50>0)prices["50"]=price50; if(price100>0)prices["100"]=price100;
 
     const oldPrice = Number(document
         .getElementById("editProductOldPrice")
@@ -5536,6 +5550,7 @@ async function updateProduct(){
     product.name = name;
     product.category = category;
     product.price = price;
+    product.prices = prices;
     product.oldPrice = oldPrice || "";
     product.description = description || "Premium خوشبو";
 
@@ -5956,7 +5971,15 @@ async function loadCategoriesFromFirebase(){
   populateCategorySelects();
   return siteCategories;
 }
+function ensureGenderCategories(){
+  const must=[
+    {id:"men",name:"مردانہ پرفیوم",nameEn:"Men's Perfumes",image:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1800&q=80",order:7,active:true},
+    {id:"women",name:"زنانہ پرفیوم",nameEn:"Women's Perfumes",image:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=1800&q=80",order:8,active:true}
+  ];
+  must.forEach(m=>{if(!siteCategories.some(c=>String(c.id)===m.id))siteCategories.push({...m});});
+}
 function activeCategories(){
+  ensureGenderCategories();
   return siteCategories.filter(c=>c.active!==false).sort((a,b)=>Number(a.order||999)-Number(b.order||999));
 }
 function categoryById(id){ return siteCategories.find(c=>String(c.id)===String(id)); }
@@ -6027,7 +6050,7 @@ function renderDynamicCategories(){
   }
   const products=getProducts();
   wrap.innerHTML=activeCategories().map(c=>{
-    const list=products.filter(p=>String(p.category)===String(c.id));
+    const list=products.filter(p=>{const pc=String(p.category||"").toLowerCase(); const cc=String(c.id||"").toLowerCase(); return pc===cc || (cc==="men"&&["male","mens","مردانہ"].includes(pc)) || (cc==="women"&&["female","females","womens","زنانہ"].includes(pc));});
     return `
       <section class="category-shop-section" id="category-${escapeHtml(String(c.id))}">
         <div class="category-shop-head section-title">
@@ -6058,7 +6081,8 @@ function categoryProductCard(product){
       <div class="stars">★★★★★</div>
       <div class="product-name">${escapeHtml(name)}</div>
       <div class="product-desc">${escapeHtml(description)}</div>
-      <div class="price"><span class="new-price">Rs. ${Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div>
+      <div class="size-price-list">${formatSizePrices(product)}</div>
+      <div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div>
       <button class="add-btn" onclick="addToCart(${JSON.stringify(product.id)})">${addText}</button>
     </div>
   </div>`;
@@ -6285,7 +6309,7 @@ function checkout(){
 function closeCheckout(){document.getElementById("checkoutModal").classList.remove("show")}
 function renderCheckoutSummary(){
   let total=cart.reduce((s,i)=>s+Number(i.price)*Number(i.qty),0);
-  document.getElementById("checkoutSummary").innerHTML=`<strong>آپ کا آرڈر</strong><br>${cart.map(i=>`${escapeHtml(i.name)} × ${i.qty} — Rs. ${(Number(i.price)*Number(i.qty)).toLocaleString()}`).join("<br>")}<hr><strong>کل رقم: Rs. ${total.toLocaleString()}</strong>`;
+  document.getElementById("checkoutSummary").innerHTML=`<strong>آپ کا آرڈر</strong><br>${cart.map(i=>`${escapeHtml(i.name)}${i.ml?` (${Number(i.ml)}ml)`:""} × ${i.qty} — Rs. ${(Number(i.price)*Number(i.qty)).toLocaleString()}`).join("<br>")}<hr><strong>کل رقم: Rs. ${total.toLocaleString()}</strong>`;
 }
 function selectPaymentMethod(method){
   document.querySelectorAll(".payment-option").forEach(x=>x.classList.remove("active"));
@@ -6350,7 +6374,7 @@ async function submitCheckout(){
   const order={
     id:"ORD-"+Date.now(),date:new Date().toLocaleString("en-PK"),
     customer:name,phone,address,province,city,postalCode:postal,notes,
-    items:cart.map(i=>({name:i.name,category:i.category,qty:Number(i.qty),price:Number(i.price)})),
+    items:cart.map(i=>({name:i.name,category:i.category,ml:i.ml?Number(i.ml):null,qty:Number(i.qty),price:Number(i.price)})),
     total,paymentMethod:method,paymentAccount,
     receipt:receipt || null,
     paymentStatus:method==="cod"?"cod":"pending",status:"new"
@@ -6607,6 +6631,18 @@ async function saveThemeSettings(){
   if(status){status.textContent="✓ تھیم اور رنگ کامیابی سے محفوظ ہوگئے۔";setTimeout(()=>status.textContent="",3000);}
 }
 
+function changeAdminPassword(){
+  const a=document.getElementById("newAdminPassword")?.value||"";
+  const b=document.getElementById("confirmAdminPassword")?.value||"";
+  const st=document.getElementById("adminPasswordStatus");
+  if(a.length<4){if(st)st.textContent="Password کم از کم 4 حروف کا ہونا چاہیے۔";return}
+  if(a!==b){if(st)st.textContent="دونوں Password ایک جیسے ہونے چاہئیں۔";return}
+  localStorage.setItem("tahirOnlineAdminPassword",a);
+  if(st){st.textContent="✓ Admin Password کامیابی سے تبدیل ہوگیا۔";setTimeout(()=>st.textContent="",3000)}
+  document.getElementById("newAdminPassword").value="";
+  document.getElementById("confirmAdminPassword").value="";
+}
+
 function installAdminExtensions(){
   const tabs=document.querySelector(".admin-tabs");
   if(tabs && !document.getElementById("categoriesAdminTab")){
@@ -6614,6 +6650,21 @@ function installAdminExtensions(){
     tabs.appendChild(b);
   }
   const settings=document.getElementById("settingsAdmin");
+
+  if(settings && !document.getElementById("adminPasswordWrap")){
+    const wrap=document.createElement("div");
+    wrap.id="adminPasswordWrap"; wrap.className="banner-form"; wrap.style.maxWidth="900px";
+    wrap.innerHTML=`
+      <h3 style="margin-bottom:8px">Admin Password تبدیل کریں</h3>
+      <p style="color:#777;margin-bottom:15px">Admin panel میں login کے بعد یہاں سے نیا password مقرر کریں۔ اگلی login سے نیا password استعمال ہوگا۔</p>
+      <div class="checkout-grid">
+        <div class="form-group"><label>نیا Password</label><input id="newAdminPassword" type="password" class="english" placeholder="کم از کم 4 حروف"></div>
+        <div class="form-group"><label>Password دوبارہ لکھیں</label><input id="confirmAdminPassword" type="password" class="english" placeholder="Confirm password"></div>
+      </div>
+      <button class="gold-btn" type="button" onclick="changeAdminPassword()">Password محفوظ کریں</button>
+      <div id="adminPasswordStatus" class="save-status"></div>`;
+    settings.insertBefore(wrap,settings.firstElementChild);
+  }
 
   if(settings && !document.getElementById("themeSettingsWrap")){
     const themeWrap=document.createElement("div");
@@ -6767,7 +6818,7 @@ function printOrder(orderId){
     <p><strong>ادائیگی:</strong> ${escapeHtml(o.paymentMethod==="cod"?"Cash on Delivery":o.paymentAccount||"")}</p>
     ${o.receipt?`<p><strong>ادائیگی کی رسید:</strong> اٹیچ شدہ</p>`:""}
     <hr>
-    ${(o.items||[]).map(i=>`<p>${escapeHtml(i.name)} × ${i.qty} — Rs. ${(Number(i.price)*Number(i.qty)).toLocaleString()}</p>`).join("")}
+    ${(o.items||[]).map(i=>`<p>${escapeHtml(i.name)}${i.ml?` (${Number(i.ml)}ml)`:""} × ${i.qty} — Rs. ${(Number(i.price)*Number(i.qty)).toLocaleString()}</p>`).join("")}
     <h3 style="text-align:left">کل: Rs. ${Number(o.total||0).toLocaleString()}</h3>
     <p>${escapeHtml(o.notes||"")}</p>
     <hr><p style="text-align:center">شکریہ — TAHIR ONLINE STORE</p>
