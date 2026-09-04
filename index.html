@@ -3502,11 +3502,17 @@ async function loadProductsFromFirebase(options = {}){
 
     const oldProducts = getProducts();
     const changed = JSON.stringify(oldProducts) !== JSON.stringify(products);
+
+    // IMPORTANT: Always render Firebase products.
+    // Previously the UI was updated only when the local cache differed.
+    // On a fresh/live Hostinger page the cache can match Firebase (or the
+    // page can start with the loading placeholder), so the products stayed
+    // invisible even though they existed in Firebase.
     if(changed){
         saveProductsLocal(products);
-        displayProducts(products);
-        loadAdminProducts();
     }
+    displayProducts(products);
+    loadAdminProducts();
 
     const totalProducts = document.getElementById("totalProducts");
     if(totalProducts){
@@ -6941,6 +6947,13 @@ setTimeout(async()=>{
 // Safe initial theme load after all theme constants and functions exist.
 applySiteTheme(localStorage.getItem("tahirOnlineTheme") || DEFAULT_THEME_SETTINGS.theme);
 loadThemeSettings();
+
+// IMPORTANT: Load products on every page load.
+// Without this call the public Products grid can remain on "Loading Products..."
+// even when products were successfully saved in Firebase.
+setTimeout(()=>{
+  loadProductsFromFirebase().catch(err=>console.error("Initial products load failed:", err));
+}, 150);
 
 </script>
 
