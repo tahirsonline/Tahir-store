@@ -1982,11 +1982,11 @@ Cash on Delivery
 <div class="categories">
 
 <a class="category cat1" href="#products">
-<h3>مردانہ پرفیوم</h3>
+<h3>پرفیوم</h3>
 </a>
 
 <a class="category cat2" href="#products">
-<h3>خواتین کے پرفیوم</h3>
+<h3>کاسمیٹکس</h3>
 </a>
 
 <a class="category cat3" href="#products">
@@ -2038,18 +2038,6 @@ Loading Products...
     class="filter-btn active"
     onclick="filterProducts('all',this)">
 سب
-</button>
-
-<button
-    class="filter-btn"
-    onclick="filterProducts('men',this)">
-مردانہ
-</button>
-
-<button
-    class="filter-btn"
-    onclick="filterProducts('women',this)">
-زنانہ
 </button>
 
 <button
@@ -2329,6 +2317,23 @@ Rs. 0
 </aside>
 
 
+
+<!-- =====================================================
+     PRODUCT SIZE SELECTION MODAL
+===================================================== -->
+<div id="sizeSelectModal" class="modal">
+  <div class="login-box" style="max-width:460px;width:100%;">
+    <button class="close-modal" type="button" onclick="closeSizeSelector()">×</button>
+    <h2 style="text-align:center;margin-bottom:18px;">سائز منتخب کریں</h2>
+    <div id="sizeSelectProductName" style="text-align:center;font-weight:bold;margin-bottom:12px;"></div>
+    <div class="form-group">
+      <label for="productSizeSelect">ML منتخب کریں</label>
+      <select id="productSizeSelect" onchange="updateSelectedSizePrice()"></select>
+    </div>
+    <div id="selectedSizePrice" class="price" style="justify-content:center;font-size:22px;font-family:Arial,sans-serif;"></div>
+    <button class="gold-btn" type="button" style="width:100%;margin-top:8px;" onclick="confirmSizeAndCheckout()">آگے بڑھیں</button>
+  </div>
+</div>
 
 <!-- =====================================================
      CHECKOUT MODAL
@@ -4106,13 +4111,68 @@ function formatSizePrices(product){
   const p=getProductPrices(product);
   return Object.entries(p).map(([ml,price])=>`<span class="size-price-chip">${ml}ml: Rs. ${Number(price).toLocaleString()}</span>`).join("");
 }
-function chooseProductSize(productId){
-  const product=getProducts().find(x=>String(x.id)===String(productId)); if(!product)return null;
-  const prices=getProductPrices(product); const keys=Object.keys(prices);
-  if(keys.length===1)return keys[0];
-  const msg="Size منتخب کریں: " + keys.map((ml,i)=>`${i+1}) ${ml}ml — Rs. ${Number(prices[ml]).toLocaleString()}`).join(" | ");
-  const answer=prompt(msg,"1"); if(answer===null)return null;
-  const index=Math.max(0,Number(answer)-1); return keys[index]||null;
+let pendingSizeProductId=null;
+
+function openSizeSelector(productId){
+  const product=getProducts().find(x=>String(x.id)===String(productId));
+  if(!product){ alert("Product نہیں ملا۔"); return; }
+
+  const prices=getProductPrices(product);
+  const keys=Object.keys(prices).sort((a,b)=>Number(a)-Number(b));
+  if(!keys.length){ alert("اس product کی قیمت موجود نہیں۔"); return; }
+
+  pendingSizeProductId=productId;
+  const modal=document.getElementById("sizeSelectModal");
+  const nameBox=document.getElementById("sizeSelectProductName");
+  const select=document.getElementById("productSizeSelect");
+  if(nameBox) nameBox.textContent=productDisplayName(product);
+
+  select.innerHTML=keys.map(ml=>`<option value="${escapeHtml(ml)}">${escapeHtml(ml)}ml — Rs. ${Number(prices[ml]).toLocaleString()}</option>`).join("");
+  updateSelectedSizePrice();
+  modal?.classList.add("show");
+}
+
+function closeSizeSelector(){
+  document.getElementById("sizeSelectModal")?.classList.remove("show");
+  pendingSizeProductId=null;
+}
+
+function updateSelectedSizePrice(){
+  const product=getProducts().find(x=>String(x.id)===String(pendingSizeProductId));
+  const select=document.getElementById("productSizeSelect");
+  const box=document.getElementById("selectedSizePrice");
+  if(!product || !select || !box)return;
+  const prices=getProductPrices(product);
+  const ml=String(select.value||"");
+  const price=Number(prices[ml]||0);
+  box.innerHTML=`<span class="new-price">Rs. ${price.toLocaleString()}</span>`;
+}
+
+function confirmSizeAndCheckout(){
+  const product=getProducts().find(x=>String(x.id)===String(pendingSizeProductId));
+  const select=document.getElementById("productSizeSelect");
+  if(!product || !select || !select.value){ alert("براہ کرم ML منتخب کریں۔"); return; }
+
+  const ml=String(select.value);
+  const prices=getProductPrices(product);
+  const selectedPrice=Number(prices[ml]||0);
+  if(!selectedPrice){ alert("اس size کی قیمت دستیاب نہیں۔"); return; }
+
+  const existing=cart.find(item=>String(item.id)===String(product.id)&&String(item.ml||"")===ml);
+  if(existing){
+    existing.qty++;
+    existing.price=selectedPrice;
+    existing.selectedPrice=selectedPrice;
+  }else{
+    cart.push({...product,qty:1,ml:Number(ml),price:selectedPrice,selectedPrice:selectedPrice});
+  }
+
+  saveCart();
+  updateCart();
+  closeSizeSelector();
+
+  // ML اور اسی کی قیمت منتخب ہونے کے فوراً بعد parcel/customer information page کھولیں۔
+  checkout();
 }
 
 function displayProducts(products = getProducts()){
@@ -4132,10 +4192,10 @@ function displayProducts(products = getProducts()){
         const image = escapeHtml(product.image || "");
         const name = escapeHtml(productDisplayName(product));
         const description = escapeHtml(productDisplayDescription(product));
-        const id = Number(product.id);
+        const id = String(product.id);
         const addText = document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
         const sizePrices=formatSizePrices(product);
-        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="size-price-list">${sizePrices}</div><div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${Number.isFinite(id)?id:0})">${addText}</button></div></div>`;
+        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="size-price-list">${sizePrices}</div><div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${JSON.stringify(id)})">${addText}</button></div></div>`;
     }).join("");
     grid.innerHTML = html;
     if(number) number.textContent = products.length + " Products";
@@ -4178,16 +4238,7 @@ function saveCart(){
 
 
 function addToCart(productId){
-  const product=getProducts().find(item=>Number(item.id)===Number(productId));
-  if(!product)return;
-  const size=chooseProductSize(productId);
-  if(!size)return;
-  const prices=getProductPrices(product);
-  const selectedPrice=Number(prices[size]||product.price||0);
-  const existing=cart.find(item=>Number(item.id)===Number(productId)&&String(item.ml||"")===String(size));
-  if(existing){existing.qty++;}
-  else{cart.push({...product,qty:1,ml:Number(size),price:selectedPrice,selectedPrice:selectedPrice});}
-  saveCart(); updateCart(); openCart();
+  openSizeSelector(productId);
 }
 
 function updateCart(){
@@ -5731,7 +5782,7 @@ async function updateAboutStoreImage(){
    LANGUAGE SWITCHER — Urdu / English
 ===================================================== */
 const LANGUAGE_TEXT = {
-"ہوم":"Home","کیٹیگریز":"Categories","پرفیوم":"Perfume","پرفیومز":"Perfumes","پرفیوم تلاش کریں...":"Search perfumes...","ہمارے بارے میں":"About Us","رابطہ":"Contact","رابطہ کریں":"Contact Us","ہم سے رابطہ کریں":"Contact Us","اہم لنکس":"Quick Links","کسٹمر سروس":"Customer Service","کسٹمر سپورٹ":"Customer Support","ابھی خریدیں":"Shop Now","کلیکشن دیکھیں":"View Collection","آفر دیکھیں":"View Offer","خاص آفر":"Special Offer","منتخب پرفیومز پر خصوصی رعایت":"Special discount on selected perfumes","خوشبو جو آپ کو یاد رکھے":"A fragrance they remember","آپ کی خوشبو":"Your Fragrance","آپ کی پہچان":"Your Identity","ہمیشہ آپ کے ساتھ":"Always With You","ہماری کلیکشن":"Our Collection","ہمارے پرفیوم":"Our Perfumes","پریمیم خوشبوئیں":"Premium Fragrances","پریمیم عطر":"Premium Attars","اعلیٰ معیار":"High Quality","محفوظ آرڈر":"Secure Ordering","گفٹ سیٹس":"Gift Sets","مردانہ":"Men","مردانہ پرفیوم":"Men's Perfumes","زنانہ":"Women","خواتین کے پرفیوم":"Women's Perfumes","عطر":"Attar","پاکستان":"Pakistan","📍 پاکستان":"📍 Pakistan","ڈیلیوری معلومات":"Delivery Information","واپسی کی پالیسی":"Return Policy","پرائیویسی پالیسی":"Privacy Policy","کل:":"Total:","آپ کا کارٹ 🛒":"Your Cart 🛒","آرڈر مکمل کریں":"Order via WhatsApp","بینرز":"Banners","ویب سائٹ کے بینرز":"Website Banners","ویب سائٹ کی تصاویر":"Website Images","ویب سائٹ سیٹنگز":"Website Settings","بینر شامل کریں":"Add Banner","نیا بینر شامل کریں":"Add New Banner","تمام بینرز":"All Banners","بینر کا عنوان":"Banner Title","چھوٹا عنوان":"Small Title","تفصیل":"Description","بٹن کا متن":"Button Text","بٹن کا لنک":"Button Link","بینر تصویر":"Banner Image","ترتیب نمبر":"Order Number","موجودہ تصویر":"Current Image","نئی تصویر منتخب کریں":"Choose New Image","تصویر تبدیل کریں":"Change Image","ترمیم":"Edit","حذف کریں":"Delete","فعال کریں":"Enable","غیر فعال کریں":"Disable","محفوظ کریں":"Save","منسوخ کریں":"Cancel","بند کریں":"Close","Product Add کریں":"Add Product","Product Update کریں":"Update Product","نیا Product Add کریں":"Add New Product","تمام Products":"All Products","تمام Orders":"All Orders","Products لوڈ ہو رہے ہیں...":"Loading products...","نئی Product Image":"New Product Image","سب سے زیادہ پسند کیے جانے والے پرفیوم":"Most Popular Perfumes","TAHIR ONLINE STORE":"TAHIR ONLINE STORE","TAHIR ONLINE STORE — Admin Panel":"TAHIR ONLINE STORE — Admin Panel","بہترین اور دلکش خوشبوؤں کا شاندار کلیکشن۔ اپنے لیے اور اپنے پیاروں کے لیے آج ہی پسندیدہ پرفیوم منتخب کریں۔":"A wonderful collection of premium and captivating fragrances. Choose your favorite perfume today for yourself and your loved ones.","Premium perfumes اور attars کا قابل اعتماد آن لائن اسٹور۔ پاکستان بھر میں ڈیلیوری دستیاب ہے۔":"A trusted online store for premium perfumes and attars. Delivery available across Pakistan.","— پاکستان بھر میں ڈیلیوری دستیاب ہے":"— Delivery available across Pakistan","پریمیم پرفیوم اور عطر کا قابل اعتماد آن لائن اسٹور۔ پاکستان بھر میں ڈیلیوری دستیاب ہے۔":"Premium perfumes and attars online store. Delivery available across Pakistan.","ہمارا مقصد ایسی خوشبوئیں فراہم کرنا ہے جو آپ کی شخصیت کو مزید خوبصورت اور یادگار بنائیں۔":"Our goal is to provide fragrances that make your personality more beautiful and memorable.","TAHIR ONLINE STORE میں ہم اپنے صارفین کے لیے":"At TAHIR ONLINE STORE, we provide our customers with","بہترین اور معیاری پرفیوم اور عطر فراہم کرتے ہیں۔":"high-quality perfumes and attars.","یہاں سے آپ ایک سے زیادہ بینر/تصویریں شامل کر سکتے ہیں۔ تمام Active بینرز ویب سائٹ پر Slider کی صورت میں نظر آئیں گے۔":"From here you can add multiple banners/images. All active banners will appear on the website as a slider.","About سیکشن کی تصویر تبدیل کریں":"Change the image in the About section","یہاں سے ایڈمن ویب سائٹ کے \"ہمارے بارے میں\" سیکشن کے نیچے موجود تصویر تبدیل کر سکتا ہے۔ نئی تصویر محفوظ ہونے کے بعد ویب سائٹ پر خودکار طور پر دکھائی جائے گی۔":"From here, the admin can change the image under the website's \"About Us\" section. After saving the new image, it will automatically appear on the website.","نئی تصویر select نہ کرنے کی صورت میں موجودہ تصویر برقرار رہے گی۔":"If no new image is selected, the current image will remain.","اردو":"Urdu","انگلش":"English","سب":"All","آفر":"Offer"
+"ہوم":"Home","کیٹیگریز":"Categories","پرفیوم":"Perfume","پرفیومز":"Perfumes","پرفیوم تلاش کریں...":"Search perfumes...","ہمارے بارے میں":"About Us","رابطہ":"Contact","رابطہ کریں":"Contact Us","ہم سے رابطہ کریں":"Contact Us","اہم لنکس":"Quick Links","کسٹمر سروس":"Customer Service","کسٹمر سپورٹ":"Customer Support","ابھی خریدیں":"Shop Now","کلیکشن دیکھیں":"View Collection","آفر دیکھیں":"View Offer","خاص آفر":"Special Offer","منتخب پرفیومز پر خصوصی رعایت":"Special discount on selected perfumes","خوشبو جو آپ کو یاد رکھے":"A fragrance they remember","آپ کی خوشبو":"Your Fragrance","آپ کی پہچان":"Your Identity","ہمیشہ آپ کے ساتھ":"Always With You","ہماری کلیکشن":"Our Collection","ہمارے پرفیوم":"Our Perfumes","پریمیم خوشبوئیں":"Premium Fragrances","پریمیم عطر":"Premium Attars","اعلیٰ معیار":"High Quality","محفوظ آرڈر":"Secure Ordering","گفٹ سیٹس":"Gift Sets","عطر":"Attar","پاکستان":"Pakistan","📍 پاکستان":"📍 Pakistan","ڈیلیوری معلومات":"Delivery Information","واپسی کی پالیسی":"Return Policy","پرائیویسی پالیسی":"Privacy Policy","کل:":"Total:","آپ کا کارٹ 🛒":"Your Cart 🛒","آرڈر مکمل کریں":"Order via WhatsApp","بینرز":"Banners","ویب سائٹ کے بینرز":"Website Banners","ویب سائٹ کی تصاویر":"Website Images","ویب سائٹ سیٹنگز":"Website Settings","بینر شامل کریں":"Add Banner","نیا بینر شامل کریں":"Add New Banner","تمام بینرز":"All Banners","بینر کا عنوان":"Banner Title","چھوٹا عنوان":"Small Title","تفصیل":"Description","بٹن کا متن":"Button Text","بٹن کا لنک":"Button Link","بینر تصویر":"Banner Image","ترتیب نمبر":"Order Number","موجودہ تصویر":"Current Image","نئی تصویر منتخب کریں":"Choose New Image","تصویر تبدیل کریں":"Change Image","ترمیم":"Edit","حذف کریں":"Delete","فعال کریں":"Enable","غیر فعال کریں":"Disable","محفوظ کریں":"Save","منسوخ کریں":"Cancel","بند کریں":"Close","Product Add کریں":"Add Product","Product Update کریں":"Update Product","نیا Product Add کریں":"Add New Product","تمام Products":"All Products","تمام Orders":"All Orders","Products لوڈ ہو رہے ہیں...":"Loading products...","نئی Product Image":"New Product Image","سب سے زیادہ پسند کیے جانے والے پرفیوم":"Most Popular Perfumes","TAHIR ONLINE STORE":"TAHIR ONLINE STORE","TAHIR ONLINE STORE — Admin Panel":"TAHIR ONLINE STORE — Admin Panel","بہترین اور دلکش خوشبوؤں کا شاندار کلیکشن۔ اپنے لیے اور اپنے پیاروں کے لیے آج ہی پسندیدہ پرفیوم منتخب کریں۔":"A wonderful collection of premium and captivating fragrances. Choose your favorite perfume today for yourself and your loved ones.","Premium perfumes اور attars کا قابل اعتماد آن لائن اسٹور۔ پاکستان بھر میں ڈیلیوری دستیاب ہے۔":"A trusted online store for premium perfumes and attars. Delivery available across Pakistan.","— پاکستان بھر میں ڈیلیوری دستیاب ہے":"— Delivery available across Pakistan","پریمیم پرفیوم اور عطر کا قابل اعتماد آن لائن اسٹور۔ پاکستان بھر میں ڈیلیوری دستیاب ہے۔":"Premium perfumes and attars online store. Delivery available across Pakistan.","ہمارا مقصد ایسی خوشبوئیں فراہم کرنا ہے جو آپ کی شخصیت کو مزید خوبصورت اور یادگار بنائیں۔":"Our goal is to provide fragrances that make your personality more beautiful and memorable.","TAHIR ONLINE STORE میں ہم اپنے صارفین کے لیے":"At TAHIR ONLINE STORE, we provide our customers with","بہترین اور معیاری پرفیوم اور عطر فراہم کرتے ہیں۔":"high-quality perfumes and attars.","یہاں سے آپ ایک سے زیادہ بینر/تصویریں شامل کر سکتے ہیں۔ تمام Active بینرز ویب سائٹ پر Slider کی صورت میں نظر آئیں گے۔":"From here you can add multiple banners/images. All active banners will appear on the website as a slider.","About سیکشن کی تصویر تبدیل کریں":"Change the image in the About section","یہاں سے ایڈمن ویب سائٹ کے \"ہمارے بارے میں\" سیکشن کے نیچے موجود تصویر تبدیل کر سکتا ہے۔ نئی تصویر محفوظ ہونے کے بعد ویب سائٹ پر خودکار طور پر دکھائی جائے گی۔":"From here, the admin can change the image under the website's \"About Us\" section. After saving the new image, it will automatically appear on the website.","نئی تصویر select نہ کرنے کی صورت میں موجودہ تصویر برقرار رہے گی۔":"If no new image is selected, the current image will remain.","اردو":"Urdu","انگلش":"English","سب":"All","آفر":"Offer"
 };
 const LANGUAGE_TEXT_EN_TO_UR = Object.fromEntries(Object.entries(LANGUAGE_TEXT).map(([u,e])=>[e,u]));
 
@@ -5918,8 +5969,6 @@ const defaultCategories = [
   {id:"staller",name:"سٹالر",nameEn:"Stoles",image:"https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85",order:4,active:true},
   {id:"bangles",name:"چوڑیاں",nameEn:"Bangles",image:"https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1800&q=85",order:5,active:true},
   {id:"cosmetics",name:"کاسمیٹکس",nameEn:"Cosmetics",image:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1800&q=85",order:6,active:true},
-  {id:"men",name:"مردانہ پرفیوم",nameEn:"Men's Perfumes",image:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1800&q=85",order:7,active:true},
-  {id:"women",name:"زنانہ پرفیوم",nameEn:"Women's Perfumes",image:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=1800&q=85",order:8,active:true}
 ];
 
 const defaultPaymentSettings = {
@@ -5971,16 +6020,11 @@ async function loadCategoriesFromFirebase(){
   populateCategorySelects();
   return siteCategories;
 }
-function ensureGenderCategories(){
-  const must=[
-    {id:"men",name:"مردانہ پرفیوم",nameEn:"Men's Perfumes",image:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1800&q=80",order:7,active:true},
-    {id:"women",name:"زنانہ پرفیوم",nameEn:"Women's Perfumes",image:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?auto=format&fit=crop&w=1800&q=80",order:8,active:true}
-  ];
-  must.forEach(m=>{if(!siteCategories.some(c=>String(c.id)===m.id))siteCategories.push({...m});});
-}
 function activeCategories(){
-  ensureGenderCategories();
-  return siteCategories.filter(c=>c.active!==false).sort((a,b)=>Number(a.order||999)-Number(b.order||999));
+  const hiddenGenderIds=["men","women","male","female","mens","womens"];
+  return siteCategories
+    .filter(c=>c.active!==false && !hiddenGenderIds.includes(String(c.id||"").toLowerCase()))
+    .sort((a,b)=>Number(a.order||999)-Number(b.order||999));
 }
 function categoryById(id){ return siteCategories.find(c=>String(c.id)===String(id)); }
 const CATEGORY_EN_FALLBACKS = {
@@ -5995,9 +6039,6 @@ const CATEGORY_EN_FALLBACKS = {
   "کاسمیٹکس":"Cosmetics",
   "میک اپ":"Makeup",
   "خواتین کاسمیٹکس":"Women's Cosmetics",
-  "مردانہ پرفیوم":"Men's Perfumes",
-  "زنانہ پرفیوم":"Women's Perfumes",
-  "خواتین کے پرفیوم":"Women's Perfumes",
   "گفٹ سیٹس":"Gift Sets",
   "خوشبوئیں":"Fragrances",
   "خوشبو":"Fragrance"
@@ -6050,7 +6091,7 @@ function renderDynamicCategories(){
   }
   const products=getProducts();
   wrap.innerHTML=activeCategories().map(c=>{
-    const list=products.filter(p=>{const pc=String(p.category||"").toLowerCase(); const cc=String(c.id||"").toLowerCase(); return pc===cc || (cc==="men"&&["male","mens","مردانہ"].includes(pc)) || (cc==="women"&&["female","females","womens","زنانہ"].includes(pc));});
+    const list=products.filter(p=>{const pc=String(p.category||"").toLowerCase(); const cc=String(c.id||"").toLowerCase(); return pc===cc;});
     return `
       <section class="category-shop-section" id="category-${escapeHtml(String(c.id))}">
         <div class="category-shop-head section-title">
@@ -6148,7 +6189,8 @@ async function addCategory(){
 }
 function loadAdminCategories(){
   const list=document.getElementById("adminCategoryList"); if(!list)return;
-  list.innerHTML=siteCategories.map(c=>`
+  const hiddenGenderIds=["men","women","male","female","mens","womens"];
+  list.innerHTML=siteCategories.filter(c=>!hiddenGenderIds.includes(String(c.id||"").toLowerCase())).map(c=>`
     <div class="category-admin-row">
       <img src="${escapeHtml(c.image||c.bannerImage||"")}" alt="">
       <div style="flex:1"><strong>${escapeHtml(c.name||"")}</strong><br><small>${escapeHtml(c.id)} | ترتیب: ${c.order||1} | ${c.active===false?"غیر فعال":"فعال"}</small></div>
