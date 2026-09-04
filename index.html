@@ -3028,6 +3028,8 @@ Description
 
 
 <button
+    type="button"
+    id="addProductBtn"
     class="gold-btn"
     onclick="addProduct()">
 
@@ -3415,10 +3417,17 @@ function getProducts(){
 }
 
 function saveProductsLocal(products){
-    localStorage.setItem(
-        "tahirOnlineProducts",
-        JSON.stringify(Array.isArray(products) ? products : [])
-    );
+    try{
+        localStorage.setItem(
+            "tahirOnlineProducts",
+            JSON.stringify(Array.isArray(products) ? products : [])
+        );
+    }catch(error){
+        // Product images are stored as base64 in Firebase and can make
+        // localStorage exceed the browser quota. This cache must never
+        // stop the Firebase product add/update operation.
+        console.warn("Products local cache could not be saved:", error);
+    }
 }
 
 /* =====================================================
@@ -5224,97 +5233,111 @@ function previewNewImage(input){
 ===================================================== */
 
 async function addProduct(){
-    const name = document
-        .getElementById("newProductName")
-        .value
-        .trim();
+    const btn = document.getElementById("addProductBtn");
+    const status = document.getElementById("productSaveStatus");
 
-    const category = document
-        .getElementById("newProductCategory")
-        .value;
+    if(btn && btn.disabled) return;
 
-    const price10 = Number(document.getElementById("newPrice10")?.value||0);
-    const price30 = Number(document.getElementById("newPrice30")?.value||0);
-    const price50 = Number(document.getElementById("newPrice50")?.value||0);
-    const price100 = Number(document.getElementById("newPrice100")?.value||0);
-    const price = Number(document.getElementById("newProductPrice").value) || price30 || price10 || price50 || price100;
-    const prices={};
-    if(price10>0)prices["10"]=price10; if(price30>0)prices["30"]=price30; if(price50>0)prices["50"]=price50; if(price100>0)prices["100"]=price100;
+    try{
+        const name = document.getElementById("newProductName")?.value.trim() || "";
+        const category = document.getElementById("newProductCategory")?.value || "men";
+        const price10 = Number(document.getElementById("newPrice10")?.value || 0);
+        const price30 = Number(document.getElementById("newPrice30")?.value || 0);
+        const price50 = Number(document.getElementById("newPrice50")?.value || 0);
+        const price100 = Number(document.getElementById("newPrice100")?.value || 0);
+        const price = Number(document.getElementById("newProductPrice")?.value) || price30 || price10 || price50 || price100;
+        const prices = {};
+        if(price10 > 0) prices["10"] = price10;
+        if(price30 > 0) prices["30"] = price30;
+        if(price50 > 0) prices["50"] = price50;
+        if(price100 > 0) prices["100"] = price100;
+        const oldPrice = Number(document.getElementById("newProductOldPrice")?.value || 0);
+        const imageInput = document.getElementById("newProductImage");
+        const imageFile = imageInput?.files?.[0];
+        const description = document.getElementById("newProductDescription")?.value.trim() || "";
 
-    const oldPrice = Number(document
-        .getElementById("newProductOldPrice")
-        .value);
-
-    const imageFile = document
-        .getElementById("newProductImage")
-        .files[0];
-
-    const description = document
-        .getElementById("newProductDescription")
-        .value
-        .trim();
-
-    if(!name || !price || !imageFile){
-        alert("Product Name، کم از کم ایک Price اور Image لازمی ہیں۔");
-        return;
-    }
-
-    if(!imageFile.type.startsWith("image/")){
-        alert("صرف Image file upload کریں۔");
-        return;
-    }
-
-    if(imageFile.size > 2 * 1024 * 1024){
-        alert("Image کا سائز 2MB سے کم ہونا چاہیے۔");
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = async function(e){
-        /*
-           IMPORTANT:
-           Do NOT read the old localStorage list and PUT the whole list.
-           We only create this one new product in Firebase.
-        */
-        const product = {
-            id: Date.now(),
-            name: name,
-            category: category,
-            price: price,
-            prices: prices,
-            oldPrice: oldPrice || "",
-            image: e.target.result,
-            description: description || "Premium خوشبو"
-        };
-
-        const result = await saveProductToFirebase(product);
-
-        if(result === null){
-            alert("Product Firebase میں save نہیں ہوا۔");
+        if(!name || !price || !imageFile){
+            alert("Product Name، کم از کم ایک Price اور Image لازمی ہیں۔");
+            return;
+        }
+        if(!imageFile.type.startsWith("image/")){
+            alert("صرف Image file upload کریں۔");
+            return;
+        }
+        if(imageFile.size > 2 * 1024 * 1024){
+            alert("Image کا سائز 2MB سے کم ہونا چاہیے۔");
             return;
         }
 
-        /* Reload from Firebase so this browser has the same data as every other system. */
-        await loadProductsFromFirebase();
+        if(btn){
+            btn.disabled = true;
+            btn.style.opacity = "0.6";
+            btn.style.cursor = "wait";
+        }
+        if(status) status.textContent = "Product Save ہو رہا ہے...";
+
+        const imageData = await new Promise((resolve, reject)=>{
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error("Image read failed"));
+            reader.readAsDataURL(imageFile);
+        });
+
+        const product = {
+            id: Date.now(),
+            name,
+            category,
+            price,
+            prices,
+            oldPrice: oldPrice || "",
+            image: imageData,
+            description: description || "Premium خوشبو"
+        };
+
+        /* Save only this product. Do NOT reload the entire Products node here.
+           Reloading all products (including base64 images) made the Add button
+           appear stuck for a long time. */
+        const result = await saveProductToFirebase(product);
+        if(result === null){
+            throw new Error("Firebase save failed");
+        }
+
+        /* Update this browser immediately from the product just saved. */
+        const currentProducts = getProducts();
+        const withoutDuplicate = currentProducts.filter(p => String(p?.id) !== String(product.id));
+        withoutDuplicate.push(product);
+        saveProductsLocal(withoutDuplicate);
+        displayProducts(withoutDuplicate);
+        loadAdminProducts();
+        const totalProducts = document.getElementById("totalProducts");
+        if(totalProducts) totalProducts.textContent = withoutDuplicate.length;
 
         document.getElementById("newProductName").value = "";
         document.getElementById("newProductPrice").value = "";
-        ["newPrice10","newPrice30","newPrice50","newPrice100"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});
+        ["newPrice10","newPrice30","newPrice50","newPrice100"].forEach(id=>{
+            const e=document.getElementById(id); if(e) e.value="";
+        });
         document.getElementById("newProductOldPrice").value = "";
         document.getElementById("newProductImage").value = "";
         document.getElementById("newProductDescription").value = "";
-        document.getElementById("newImagePreview").style.display = "none";
+        const preview=document.getElementById("newImagePreview");
+        if(preview) preview.style.display="none";
 
-        document.getElementById("productSaveStatus").textContent =
-            "✓ Product Firebase میں کامیابی سے Save ہو گیا۔";
-
-        setTimeout(() => {
-            document.getElementById("productSaveStatus").textContent = "";
-        }, 3000);
-    };
-
-    reader.readAsDataURL(imageFile);
+        if(status){
+            status.textContent = "✓ Product Firebase میں کامیابی سے Save ہو گیا۔";
+            setTimeout(()=>{ status.textContent=""; },3000);
+        }
+    }catch(error){
+        console.error("Add Product Error:", error);
+        if(status) status.textContent = "Product Save نہیں ہو سکا۔ دوبارہ کوشش کریں۔";
+        alert("Product Save نہیں ہو سکا۔ Firebase یا Image کی وجہ سے مسئلہ آیا ہے۔");
+    }finally{
+        if(btn){
+            btn.disabled = false;
+            btn.style.opacity = "";
+            btn.style.cursor = "pointer";
+        }
+    }
 }
 
 /* =====================================================
