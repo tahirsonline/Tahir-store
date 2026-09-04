@@ -3395,17 +3395,30 @@ async function firebaseDelete(path){
 
 function getProducts(){
     const saved = localStorage.getItem("tahirOnlineProducts");
+    let products = defaultProducts;
 
     if(saved){
         try{
             const parsed = JSON.parse(saved);
-            return Array.isArray(parsed) ? parsed : [];
+            products = Array.isArray(parsed) ? parsed : defaultProducts;
         }catch(e){
             console.error("Local products parse error:", e);
         }
     }
 
-    return defaultProducts;
+    /* Clean duplicate cards from the local cache as well. */
+    const seen = new Set();
+    return products.filter(product => {
+        const key = [
+            String(product?.name ?? "").trim().toLowerCase(),
+            String(product?.category ?? "").trim().toLowerCase(),
+            String(product?.image ?? "").trim(),
+            JSON.stringify(product?.prices ?? {})
+        ].join("||");
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 function saveProductsLocal(products){
@@ -3431,16 +3444,36 @@ function firebaseProductsToArray(data){
         return [];
     }
 
-    if(Array.isArray(data)){
-        return data.filter(Boolean);
-    }
+    const raw = Array.isArray(data)
+        ? data.filter(Boolean)
+        : Object.entries(data)
+            .filter(([key,value]) => value && typeof value === "object")
+            .map(([key,value]) => ({
+                ...value,
+                id: value.id ?? key
+            }));
 
-    return Object.entries(data)
-        .filter(([key,value]) => value && typeof value === "object")
-        .map(([key,value]) => ({
-            ...value,
-            id: value.id ?? key
-        }));
+    /* Firebase may already contain old duplicate records. Remove them
+       before rendering so one product can never create several cards. */
+    const seenIds = new Set();
+    const seenProducts = new Set();
+
+    return raw.filter(product => {
+        const idKey = String(product?.id ?? "");
+        if(idKey && seenIds.has(idKey)) return false;
+
+        const productKey = [
+            String(product?.name ?? "").trim().toLowerCase(),
+            String(product?.category ?? "").trim().toLowerCase(),
+            String(product?.image ?? "").trim(),
+            JSON.stringify(product?.prices ?? {})
+        ].join("||");
+
+        if(seenProducts.has(productKey)) return false;
+        if(idKey) seenIds.add(idKey);
+        seenProducts.add(productKey);
+        return true;
+    });
 }
 
 /* =====================================================
@@ -3502,17 +3535,11 @@ async function loadProductsFromFirebase(options = {}){
 
     const oldProducts = getProducts();
     const changed = JSON.stringify(oldProducts) !== JSON.stringify(products);
-
-    // IMPORTANT: Always render Firebase products.
-    // Previously the UI was updated only when the local cache differed.
-    // On a fresh/live Hostinger page the cache can match Firebase (or the
-    // page can start with the loading placeholder), so the products stayed
-    // invisible even though they existed in Firebase.
     if(changed){
         saveProductsLocal(products);
+        displayProducts(products);
+        loadAdminProducts();
     }
-    displayProducts(products);
-    loadAdminProducts();
 
     const totalProducts = document.getElementById("totalProducts");
     if(totalProducts){
@@ -6947,13 +6974,6 @@ setTimeout(async()=>{
 // Safe initial theme load after all theme constants and functions exist.
 applySiteTheme(localStorage.getItem("tahirOnlineTheme") || DEFAULT_THEME_SETTINGS.theme);
 loadThemeSettings();
-
-// IMPORTANT: Load products on every page load.
-// Without this call the public Products grid can remain on "Loading Products..."
-// even when products were successfully saved in Firebase.
-setTimeout(()=>{
-  loadProductsFromFirebase().catch(err=>console.error("Initial products load failed:", err));
-}, 150);
 
 </script>
 
