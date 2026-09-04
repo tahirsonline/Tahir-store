@@ -3242,39 +3242,31 @@ async function firebasePut(
     path,
     data
 ){
-
     try{
-
-        const response =
-            await fetch(
-                path + ".json",
-                {
-                    method:"PUT",
-
-                    headers:{
-                        "Content-Type":
-                        "application/json"
-                    },
-
-                    body:
-                        JSON.stringify(data)
-                }
-            );
-
-        if(!response.ok){
-            throw new Error("Firebase PUT failed");
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        let response;
+        try{
+            response = await fetch(path + ".json", {
+                method:"PUT",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify(data),
+                signal:controller.signal
+            });
+        }finally{
+            clearTimeout(timeout);
         }
-
+        if(!response.ok){
+            throw new Error("Firebase PUT failed: " + response.status);
+        }
         return await response.json();
-
     }catch(error){
-
         console.error(error);
-
-        alert(
-            "Firebase میں data save نہیں ہو سکا۔"
-        );
-
+        if(error && error.name === "AbortError"){
+            alert("Firebase response میں 15 سیکنڈ سے زیادہ وقت لگ رہا ہے۔ Firebase Database URL یا Rules چیک کریں۔");
+        }else{
+            alert("Firebase میں data save نہیں ہو سکا۔");
+        }
         return null;
     }
 }
@@ -5278,7 +5270,26 @@ async function addProduct(){
 
         const imageData = await new Promise((resolve, reject)=>{
             const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxSize = 1000;
+                    let w = img.naturalWidth || img.width;
+                    let h = img.naturalHeight || img.height;
+                    if(w > maxSize || h > maxSize){
+                        const scale = Math.min(maxSize / w, maxSize / h);
+                        w = Math.round(w * scale);
+                        h = Math.round(h * scale);
+                    }
+                    const canvas = document.createElement("canvas");
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL("image/jpeg", 0.78));
+                };
+                img.onerror = () => reject(new Error("Image decode failed"));
+                img.src = reader.result;
+            };
             reader.onerror = () => reject(new Error("Image read failed"));
             reader.readAsDataURL(imageFile);
         });
