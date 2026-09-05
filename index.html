@@ -5814,10 +5814,32 @@ const defaultPaymentSettings = {
 
 let siteCategories = [];
 
+function normalizeCategory(c,index=0){
+  if(!c || typeof c!=="object") return null;
+  const rawId=String(c.id||c.slug||c.key||`category-${index+1}`).trim();
+  const name=String(c.name||c.title||c.label||c.nameUrdu||c.urduName||"").trim();
+  const nameEn=String(c.nameEn||c.englishName||c.titleEn||c.nameEnglish||"").trim();
+  if(!rawId) return null;
+  return {...c,id:rawId,name:name||nameEn||rawId,nameEn:nameEn||name||rawId};
+}
 function categoriesToArray(data){
   if(!data) return [];
-  if(Array.isArray(data)) return data.filter(Boolean);
-  return Object.entries(data).filter(([,v])=>v&&typeof v==="object").map(([k,v])=>({...v,id:v.id||k}));
+  const raw=Array.isArray(data)
+    ? data
+    : Object.entries(data).filter(([,v])=>v&&typeof v==="object").map(([k,v])=>({...v,id:v.id||k}));
+  return raw.map((c,i)=>normalizeCategory(c,i)).filter(Boolean);
+}
+function ensureUsableCategories(){
+  const usable=Array.isArray(siteCategories)
+    ? siteCategories.filter(c=>c && c.active!==false && String(c.id||"").trim() && String(c.name||c.nameEn||c.title||c.label||"").trim())
+    : [];
+  if(!usable.length){
+    siteCategories=defaultCategories.map(x=>({...x}));
+  }else{
+    siteCategories=siteCategories.map((c,i)=>normalizeCategory(c,i)).filter(Boolean);
+  }
+  siteCategories.sort((a,b)=>Number(a.order||999)-Number(b.order||999));
+  return siteCategories;
 }
 async function loadCategoriesFromFirebase(){
   // Always render a local copy first so categories never stay hidden while
@@ -5836,12 +5858,15 @@ async function loadCategoriesFromFirebase(){
     const data = await firebaseGet(FIREBASE_CATEGORIES);
     if(data!==null){
       let arr = categoriesToArray(data);
-      if(!arr.length){
-        arr = Array.isArray(cached) && cached.length
-          ? cached
-          : defaultCategories.map(x=>({...x}));
+      const validArr = arr.filter(c=>c && c.id && (c.name || c.nameEn));
+      if(!validArr.length){
+        const cachedArr = categoriesToArray(cached);
+        arr = cachedArr.filter(c=>c && c.active!==false);
+        if(!arr.length) arr = defaultCategories.map(x=>({...x}));
         const obj={}; arr.forEach(x=>obj[x.id]=x);
         await firebasePut(FIREBASE_CATEGORIES,obj);
+      }else{
+        arr=validArr;
       }
       siteCategories = arr;
       localStorage.setItem("tahirOnlineCategories",JSON.stringify(arr));
@@ -5850,9 +5875,13 @@ async function loadCategoriesFromFirebase(){
     console.warn("Category load failed; using local categories.", e);
   }
 
+  ensureUsableCategories();
   siteCategories.sort((a,b)=>Number(a.order||999)-Number(b.order||999));
+  localStorage.setItem("tahirOnlineCategories",JSON.stringify(siteCategories));
   renderDynamicCategories();
   populateCategorySelects();
+  loadAdminCategories();
+  loadCategoryImageSettings();
   return siteCategories;
 }
 function activeCategories(){
@@ -5964,12 +5993,17 @@ function categoryProductCard(product){
   </div>`;
 }
 function populateCategorySelects(){
+  ensureUsableCategories();
   const selects=[document.getElementById("newProductCategory"),document.getElementById("editProductCategory")];
+  const cats=activeCategories();
   selects.forEach(sel=>{
     if(!sel)return;
     const current=sel.value;
-    sel.innerHTML=activeCategories().map(c=>`<option value="${escapeHtml(String(c.id))}">${escapeHtml(catName(c))}</option>`).join("");
+    const options=[`<option value="">کیٹیگری منتخب کریں</option>`]
+      .concat(cats.map(c=>`<option value="${escapeHtml(String(c.id))}">${escapeHtml(catName(c)||c.name||c.nameEn||String(c.id))}</option>`));
+    sel.innerHTML=options.join("");
     if(current && [...sel.options].some(o=>o.value===current)) sel.value=current;
+    else if(cats.length) sel.value=String(cats[0].id);
   });
 }
 function refreshCategoryUI(){
@@ -6729,11 +6763,12 @@ if(!siteCategories.length){
   try{
     const cachedCategories=JSON.parse(localStorage.getItem("tahirOnlineCategories")||"null");
     siteCategories=Array.isArray(cachedCategories)&&cachedCategories.length
-      ? cachedCategories
+      ? categoriesToArray(cachedCategories)
       : defaultCategories.map(x=>({...x}));
   }catch(e){
     siteCategories=defaultCategories.map(x=>({...x}));
   }
+  ensureUsableCategories();
   renderDynamicCategories();
   populateCategorySelects();
 }
