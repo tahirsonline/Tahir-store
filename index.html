@@ -1419,7 +1419,7 @@ footer li a:hover{
    LOADING
 ===================================================== */
 
-.firebase-loading{
+.server-loading{
     text-align:center;
     padding:25px;
     color:#777;
@@ -2053,7 +2053,7 @@ Loading Products...
 
 <div id="productGrid" class="products">
 
-<div class="firebase-loading">
+<div class="server-loading">
 Products لوڈ ہو رہے ہیں...
 </div>
 
@@ -3072,7 +3072,7 @@ Desktop Products Server پر منتقل کریں
 <script>
 
 /* =====================================================
-   HOSTINGER DATABASE (Firebase removed)
+   HOSTINGER DATABASE (Hostinger Server removed)
 ===================================================== */
 
 const HOSTINGER_API = "/api.php";
@@ -3084,6 +3084,19 @@ const FIREBASE_PRODUCTS = "tahirOnlineStore/products";
 const FIREBASE_ORDERS = "tahirOnlineStore/orders";
 const FIREBASE_BANNERS = "tahirOnlineStore/banners";
 const FIREBASE_SETTINGS = "tahirOnlineStore/settings";
+const HOSTINGER_ADMIN_PASSWORD = FIREBASE_SETTINGS + "/adminPassword";
+// =====================================================
+// AUTHORITATIVE HOSTINGER STATE
+// All devices read website data from the Hostinger API.
+// localStorage is used only for device-specific UI/cache
+// such as cart, language and login session.
+// =====================================================
+let serverProductsCache = [];
+let serverProductsLoaded = false;
+let serverOrdersCache = [];
+let serverOrdersLoaded = false;
+let serverStateReady = false;
+
 
 function hostingerPath(path){
     let p = String(path || "").trim();
@@ -3264,10 +3277,18 @@ const defaultProducts = [
 /* =====================================================
    PRODUCTS - LOCAL CACHE
    IMPORTANT: localStorage is only a cache.
-   Firebase is always the source of truth.
+   Hostinger Server is always the source of truth.
 ===================================================== */
 
 function getProducts(){
+    // Once the Hostinger list has loaded, NEVER let this browser's
+    // old localStorage products override the server.
+    if(serverProductsLoaded){
+        return Array.isArray(serverProductsCache)
+            ? serverProductsCache.map(p => ({...p}))
+            : [];
+    }
+
     const saved = localStorage.getItem("tahirOnlineProducts");
     let products = defaultProducts;
 
@@ -3280,7 +3301,6 @@ function getProducts(){
         }
     }
 
-    /* Clean duplicate cards from the local cache as well. */
     const seen = new Set();
     return products.filter(product => {
         const key = [
@@ -3302,9 +3322,9 @@ function saveProductsLocal(products){
             JSON.stringify(Array.isArray(products) ? products : [])
         );
     }catch(error){
-        // Product images are stored as base64 in Firebase and can make
+        // Product images are stored as base64 in Hostinger Server and can make
         // localStorage exceed the browser quota. This cache must never
-        // stop the Firebase product add/update operation.
+        // stop the Hostinger Server product add/update operation.
         console.warn("Products local cache could not be saved:", error);
     }
 }
@@ -3313,7 +3333,7 @@ function saveProductsLocal(products){
    SERVER PRODUCTS -> ARRAY
 ===================================================== */
 
-function firebaseProductsToArray(data){
+function serverProductsToArray(data){
     if(!data){
         return [];
     }
@@ -3373,45 +3393,29 @@ async function saveProductToFirebase(product){
 async function loadProductsFromFirebase(options = {}){
     const data = await firebaseGet(FIREBASE_PRODUCTS);
 
-    /* If Firebase request fails, keep the local cache visible. */
+    // If the server cannot be reached, preserve the current screen/cache.
     if(data === null){
-        displayProducts(getProducts());
-        loadAdminProducts();
-        return getProducts();
+        if(!serverProductsLoaded){
+            displayProducts(getProducts());
+            loadAdminProducts();
+        }
+        return serverProductsLoaded ? serverProductsCache : getProducts();
     }
 
-    let products = firebaseProductsToArray(data);
+    const products = serverProductsToArray(data);
 
-    /*
-       HOSTINGER IS THE SOURCE OF TRUTH.
-       An empty server must stay empty; never substitute this browser's
-       local/default products. Use the Admin migration button once to
-       move desktop-only products to the Hostinger server.
-    */
-    if(!products.length){
-        displayProducts([]);
-        loadAdminProducts();
+    // Hostinger is the single source of truth.
+    serverProductsCache = products.map(p => ({...p}));
+    serverProductsLoaded = true;
 
-        const totalProducts = document.getElementById("totalProducts");
-        if(totalProducts) totalProducts.textContent = "0";
-
-        return [];
-    }
-
-    const oldProducts = getProducts();
-    const changed = JSON.stringify(oldProducts) !== JSON.stringify(products);
-    if(changed){
-        saveProductsLocal(products);
-        displayProducts(products);
-        loadAdminProducts();
-    }
+    saveProductsLocal(serverProductsCache);
+    displayProducts(serverProductsCache);
+    loadAdminProducts();
 
     const totalProducts = document.getElementById("totalProducts");
-    if(totalProducts){
-        totalProducts.textContent = products.length;
-    }
+    if(totalProducts) totalProducts.textContent = serverProductsCache.length;
 
-    return products;
+    return serverProductsCache.map(p => ({...p}));
 }
 
 /* =====================================================
@@ -3442,7 +3446,14 @@ async function syncLocalProductsToServer(){
     if(status) status.textContent = "Server data چیک ہو رہا ہے...";
 
     try{
-        const localProducts = getProducts().map(p => ({...p}));
+        const rawLocalProducts = localStorage.getItem("tahirOnlineProducts");
+        let localProducts = [];
+        try{
+            const parsedLocal = rawLocalProducts ? JSON.parse(rawLocalProducts) : [];
+            localProducts = Array.isArray(parsedLocal) ? parsedLocal.map(p => ({...p})) : [];
+        }catch(e){
+            localProducts = [];
+        }
         if(!localProducts.length){
             if(status) status.textContent = "اس browser میں منتقل کرنے کے لیے کوئی local product نہیں ملا۔";
             return;
@@ -3451,7 +3462,7 @@ async function syncLocalProductsToServer(){
         const serverData = await firebaseGet(FIREBASE_PRODUCTS);
         if(serverData === null) throw new Error("Server products read failed");
 
-        const serverProducts = firebaseProductsToArray(serverData);
+        const serverProducts = serverProductsToArray(serverData);
         const existingKeys = new Set(serverProducts.map(productMigrationKey));
         const usedIds = new Set(serverProducts.map(p => String(p?.id ?? "")));
         let added = 0, skipped = 0;
@@ -3507,8 +3518,28 @@ async function syncProductsFromFirebase(){
 }
 
 /* SAFE BACKGROUND SYNC: 60 seconds, with change detection. */
-setInterval(syncProductsFromFirebase, 60000);
-setInterval(syncBannersFromFirebase, 60000);
+setInterval(syncProductsFromFirebase, 30000);
+setInterval(syncBannersFromFirebase, 30000);
+
+// Keep every shared website setting fresh on every device.
+async function syncWholeWebsiteFromHostinger(){
+    try{
+        await Promise.allSettled([
+            loadProductsFromFirebase({background:true}),
+            loadBannersFromFirebase(),
+            loadCategoriesFromFirebase(),
+            loadContactSettings(),
+            loadPaymentSettings(),
+            loadThemeSettings(),
+            loadAboutStoreImage(),
+            loadOrdersFromFirebase()
+        ]);
+        serverStateReady = true;
+    }catch(error){
+        console.warn("Website background sync failed:", error);
+    }
+}
+setInterval(syncWholeWebsiteFromHostinger, 30000);
 
 /* =====================================================
    BANNERS / HERO SLIDER
@@ -3552,7 +3583,7 @@ let currentBannerIndex = 0;
 let bannerTimer = null;
 let bannersSyncRunning = false;
 
-function firebaseBannersToArray(data){
+function serverBannersToArray(data){
     if(!data) return [];
 
     if(Array.isArray(data)){
@@ -3600,7 +3631,7 @@ async function loadBannersFromFirebase(){
         return banners;
     }
 
-    let loaded = firebaseBannersToArray(data);
+    let loaded = serverBannersToArray(data);
 
     if(!loaded.length){
         loaded = defaultBanners.map(b=>({...b}));
@@ -3628,7 +3659,7 @@ async function loadBannersFromFirebase(){
         currentBannerIndex = 0;
     }
 
-    /* Always render after the first Firebase/local load. */
+    /* Always render after the first Hostinger Server/local load. */
     renderHeroBanners();
     loadAdminBanners();
 
@@ -3740,7 +3771,7 @@ function escapeHtml(value){
 
 /*
    Compress banner images before saving them in Realtime Database.
-   This keeps Firebase data much smaller than the original camera/photo file.
+   This keeps Hostinger Server data much smaller than the original camera/photo file.
 */
 function compressImageFile(file, maxWidth=1800, maxHeight=700, quality=.78){
     return new Promise((resolve,reject)=>{
@@ -3867,7 +3898,7 @@ async function addBanner(){
 
         if(result === null){
             status.textContent = "";
-            alert("بینر Firebase میں save نہیں ہوا۔");
+            alert("بینر Hostinger Server میں save نہیں ہوا۔");
             return;
         }
 
@@ -4042,7 +4073,7 @@ async function deleteBanner(id){
     );
 
     if(!result){
-        alert("بینر Firebase سے delete نہیں ہوا۔");
+        alert("بینر Hostinger Server سے delete نہیں ہوا۔");
         return;
     }
 
@@ -4449,22 +4480,24 @@ async function checkout(){
     };
 
 
-    /* Firebase میں Order */
+    /* Hostinger Server میں Order */
 
-    const firebaseResult =
+    const serverResult =
         await firebasePost(
             FIREBASE_ORDERS,
             order
         );
 
 
-    if(firebaseResult){
-
-        order.firebaseId =
-            firebaseResult.name;
-
+    if(serverResult){
+        order.serverId = serverResult.name || order.id;
     }
 
+    // Server is authoritative; keep a local copy only for fast rendering.
+    serverOrdersLoaded = true;
+    serverOrdersCache = [order, ...serverOrdersCache.filter(
+        existing => String(existing.id) !== String(order.id)
+    )];
 
     /* Local backup */
 
@@ -4667,46 +4700,36 @@ function closeAdminLogin(){
 }
 
 
-function adminLogin(){
+async function adminLogin(){
+    const username = document.getElementById("adminUsername").value;
+    const password = document.getElementById("adminPassword").value;
+    const errorBox = document.getElementById("loginError");
 
-    const username =
-        document
-            .getElementById("adminUsername")
-            .value;
+    if(username !== "admin"){
+        errorBox.textContent = "Username یا Password غلط ہے۔";
+        return;
+    }
 
+    let savedPassword = null;
+    try{
+        savedPassword = await firebaseGet(HOSTINGER_ADMIN_PASSWORD);
+    }catch(e){}
 
-    const password =
-        document
-            .getElementById("adminPassword")
-            .value;
+    // First installation keeps the original password until it is changed
+    // from Admin Settings. The server value is used on every device.
+    if(!savedPassword){
+        savedPassword = "12345";
+        await firebasePut(HOSTINGER_ADMIN_PASSWORD, savedPassword);
+    }
 
-
-    const savedPassword = localStorage.getItem("tahirOnlineAdminPassword") || "12345";
-
-    if(
-        username === "admin" &&
-        password === savedPassword
-    ){
-
-        localStorage.setItem(
-            "tahirOnlineAdminLogin",
-            "true"
-        );
-
-
+    if(password === String(savedPassword)){
+        localStorage.setItem("tahirOnlineAdminLogin","true");
         closeAdminLogin();
-
         openAdminPanel();
-
     }else{
-
-        document
-            .getElementById("loginError")
-            .textContent =
-            "Username یا Password غلط ہے۔";
+        errorBox.textContent = "Username یا Password غلط ہے۔";
     }
 }
-
 
 /* =====================================================
    ADMIN PANEL
@@ -4801,314 +4824,121 @@ async function loadAdminDashboard(){
 ===================================================== */
 
 async function loadOrdersFromFirebase(){
+    const data = await firebaseGet(FIREBASE_ORDERS);
 
-    const data =
-        await firebaseGet(
-            FIREBASE_ORDERS
-        );
-
-
-    if(!data){
-
-        loadOrders();
-
-        return;
+    if(data === null){
+        if(!serverOrdersLoaded) loadOrders();
+        return serverOrdersLoaded ? serverOrdersCache : [];
     }
 
-
-    const orders =
-        Object.entries(data)
-        .map(
-            ([firebaseId,order]) => ({
-
-                firebaseId:
-                    firebaseId,
-
+    const orders = Array.isArray(data)
+        ? data.filter(Boolean).map((order,index)=>({
+            serverId: order.serverId || order.id || String(index),
+            ...order
+        }))
+        : Object.entries(data || {})
+            .filter(([,order]) => order && typeof order === "object")
+            .map(([serverId,order]) => ({
+                serverId,
                 ...order
+            }))
+            .reverse();
 
-            })
-        )
-        .reverse();
-
-
-    localStorage.setItem(
-        "tahirOnlineOrders",
-        JSON.stringify(orders)
-    );
-
-
+    serverOrdersCache = orders;
+    serverOrdersLoaded = true;
+    localStorage.setItem("tahirOnlineOrders", JSON.stringify(orders));
     loadOrders();
+    return orders;
 }
-
 
 /* =====================================================
    LOAD ORDERS
 ===================================================== */
 
 function loadOrders(){
+    const orders = serverOrdersLoaded
+        ? serverOrdersCache
+        : JSON.parse(localStorage.getItem("tahirOnlineOrders") || "[]");
 
-    const orders =
-        JSON.parse(
-            localStorage.getItem(
-                "tahirOnlineOrders"
-            ) || "[]"
-        );
+    document.getElementById("totalOrders").textContent = orders.length;
 
+    const newOrders = orders.filter(order => order.status === "new").length;
+    document.getElementById("newOrders").textContent = newOrders;
 
-    document
-        .getElementById("totalOrders")
-        .textContent =
-        orders.length;
+    const sales = orders.reduce(
+        (sum,order) => sum + Number(order.total || 0), 0
+    );
+    document.getElementById("totalSales").textContent =
+        "Rs. " + sales.toLocaleString();
 
-
-    const newOrders =
-        orders.filter(
-            order =>
-                order.status === "new"
-        ).length;
-
-
-    document
-        .getElementById("newOrders")
-        .textContent =
-        newOrders;
-
-
-    const sales =
-        orders.reduce(
-            (sum,order) =>
-                sum +
-                Number(order.total || 0),
-            0
-        );
-
-
-    document
-        .getElementById("totalSales")
-        .textContent =
-        "Rs. " +
-        sales.toLocaleString();
-
-
-    const table =
-        document.getElementById(
-            "ordersTable"
-        );
-
+    const table = document.getElementById("ordersTable");
+    if(!table) return;
 
     if(!orders.length){
-
         table.innerHTML = `
-
-        <tr>
-
-            <td
-                colspan="7"
-                style="
-                text-align:center;
-                padding:30px;
-                ">
-
-                ابھی کوئی Order موجود نہیں۔
-
-            </td>
-
-        </tr>
-
-        `;
-
+        <tr><td colspan="7" style="text-align:center;padding:30px;">
+        ابھی کوئی Order موجود نہیں۔
+        </td></tr>`;
         return;
     }
 
-
-    table.innerHTML =
-        orders.map(
-            order => `
-
-            <tr>
-
-                <td class="english">
-
-                    <strong>
-                        ${order.id}
-                    </strong>
-
-                    <br>
-
-                    <small>
-                        ${order.date || ""}
-                    </small>
-
-                </td>
-
-
-                <td>
-                    ${escapeHtml(order.customer || "")}
-                </td>
-
-
-                <td class="english">
-                    ${escapeHtml(order.phone || "")}
-                </td>
-
-
-                <td>
-                    ${escapeHtml(order.address || "")}
-                </td>
-
-
-                <td>
-
-                    ${
-                        (order.items || [])
-                        .map(
-                            item =>
-                            `
-                            ${escapeHtml(item.name)}
-                            ×
-                            ${item.qty}
-                            `
-                        )
-                        .join("<br>")
-                    }
-
-                </td>
-
-
-                <td class="english">
-
-                    Rs.
-                    ${Number(order.total || 0)
-                        .toLocaleString()}
-
-                </td>
-
-
-                <td>
-
-                    <select
-                        onchange="
-                        changeOrderStatus(
-                            '${order.firebaseId || ""}',
-                            '${order.id}',
-                            this.value
-                        )">
-
-                        <option
-                            value="new"
-                            ${
-                                order.status === "new"
-                                ? "selected"
-                                : ""
-                            }>
-
-                            New
-
-                        </option>
-
-
-                        <option
-                            value="processing"
-                            ${
-                                order.status === "processing"
-                                ? "selected"
-                                : ""
-                            }>
-
-                            Processing
-
-                        </option>
-
-
-                        <option
-                            value="delivered"
-                            ${
-                                order.status === "delivered"
-                                ? "selected"
-                                : ""
-                            }>
-
-                            Delivered
-
-                        </option>
-
-
-                        <option
-                            value="cancelled"
-                            ${
-                                order.status === "cancelled"
-                                ? "selected"
-                                : ""
-                            }>
-
-                            Cancelled
-
-                        </option>
-
-                    </select>
-
-                </td>
-
-            </tr>
-
-            `
-        ).join("");
+    table.innerHTML = orders.map(order => `
+        <tr>
+            <td class="english">
+                <strong>${escapeHtml(order.id || "")}</strong><br>
+                <small>${escapeHtml(order.date || "")}</small>
+            </td>
+            <td>${escapeHtml(order.customer || "")}</td>
+            <td class="english">${escapeHtml(order.phone || "")}</td>
+            <td>${escapeHtml(order.address || "")}</td>
+            <td>${(order.items || []).map(item =>
+                `${escapeHtml(item.name || "")} × ${Number(item.qty || 0)}`
+            ).join("<br>")}</td>
+            <td class="english">Rs. ${Number(order.total || 0).toLocaleString()}</td>
+            <td>
+                <select onchange="changeOrderStatus('${escapeHtml(order.serverId || "")}','${escapeHtml(order.id || "")}',this.value)">
+                    <option value="new" ${order.status==="new"?"selected":""}>New</option>
+                    <option value="processing" ${order.status==="processing"?"selected":""}>Processing</option>
+                    <option value="delivered" ${order.status==="delivered"?"selected":""}>Delivered</option>
+                    <option value="cancelled" ${order.status==="cancelled"?"selected":""}>Cancelled</option>
+                </select>
+            </td>
+        </tr>
+    `).join("");
 }
-
 
 /* =====================================================
    CHANGE ORDER STATUS
 ===================================================== */
 
-async function changeOrderStatus(
-    firebaseId,
-    orderId,
-    status
-){
-
-    if(firebaseId){
-
-        await firebasePatch(
-            FIREBASE_ORDERS +
-            "/" +
-            firebaseId,
-            {
-                status:status
-            }
-        );
-
+async function changeOrderStatus(serverId, orderId, status){
+    const key = serverId || orderId;
+    if(!key){
+        alert("Order ID موجود نہیں۔");
+        return;
     }
 
-
-    let orders =
-        JSON.parse(
-            localStorage.getItem(
-                "tahirOnlineOrders"
-            ) || "[]"
-        );
-
-
-    const order =
-        orders.find(
-            item =>
-                item.id === orderId
-        );
-
-
-    if(order){
-        order.status = status;
-    }
-
-
-    localStorage.setItem(
-        "tahirOnlineOrders",
-        JSON.stringify(orders)
+    const result = await firebasePatch(
+        FIREBASE_ORDERS + "/" + encodeURIComponent(String(key)),
+        {status}
     );
 
+    if(result === null){
+        alert("Order status Hostinger server پر update نہیں ہوا۔");
+        return;
+    }
 
+    serverOrdersLoaded = true;
+    serverOrdersCache = serverOrdersCache.map(order =>
+        String(order.serverId || order.id) === String(key) ||
+        String(order.id) === String(orderId)
+            ? {...order, status}
+            : order
+    );
+
+    localStorage.setItem("tahirOnlineOrders", JSON.stringify(serverOrdersCache));
     loadOrders();
 }
-
 
 /* =====================================================
    IMAGE PREVIEW - ADD
@@ -5282,12 +5112,14 @@ async function addProduct(){
             throw new Error("Hostinger save failed");
         }
 
-        /* Update this browser immediately from the product just saved. */
+        /* Update the authoritative in-memory server cache immediately. */
+        serverProductsLoaded = true;
         const currentProducts = getProducts();
         const withoutDuplicate = currentProducts.filter(p => String(p?.id) !== String(product.id));
         withoutDuplicate.push(product);
-        saveProductsLocal(withoutDuplicate);
-        displayProducts(withoutDuplicate);
+        serverProductsCache = withoutDuplicate.map(p => ({...p}));
+        saveProductsLocal(serverProductsCache);
+        displayProducts(serverProductsCache);
         loadAdminProducts();
         const totalProducts = document.getElementById("totalProducts");
         if(totalProducts) totalProducts.textContent = withoutDuplicate.length;
@@ -5557,7 +5389,7 @@ async function updateProduct(){
         .getElementById("editProductIndex")
         .value);
 
-    /* Always get the latest Firebase list before editing. */
+    /* Always get the latest Hostinger Server list before editing. */
     const products = await loadProductsFromFirebase();
     const product = products[index];
 
@@ -5660,7 +5492,7 @@ async function deleteProduct(index){
         return;
     }
 
-    /* Always use the latest Firebase data. */
+    /* Always use the latest Hostinger Server data. */
     const products = await loadProductsFromFirebase();
     const product = products[index];
 
@@ -5674,7 +5506,7 @@ async function deleteProduct(index){
     );
 
     if(!result){
-        alert("Product Firebase سے delete نہیں ہوا۔");
+        alert("Product Hostinger Server سے delete نہیں ہوا۔");
         return;
     }
 
@@ -5763,7 +5595,7 @@ async function updateAboutStoreImage(){
 
         if(result === null){
             status.textContent = "";
-            alert("تصویر Firebase میں save نہیں ہوئی۔");
+            alert("تصویر Hostinger Server میں save نہیں ہوئی۔");
             return;
         }
 
@@ -5956,7 +5788,7 @@ syncBannersFromFirebase();
 loadAboutStoreImage();
 loadContactSettings();
 
-/* Firebase سے Orders */
+/* Hostinger Server سے Orders */
 loadOrdersFromFirebase();
 
 /* =====================================================
@@ -5989,7 +5821,7 @@ function categoriesToArray(data){
 }
 async function loadCategoriesFromFirebase(){
   // Always render a local copy first so categories never stay hidden while
-  // Firebase is slow or temporarily unavailable.
+  // Hostinger Server is slow or temporarily unavailable.
   const cached = JSON.parse(localStorage.getItem("tahirOnlineCategories")||"null");
   if(!siteCategories.length){
     siteCategories = Array.isArray(cached) && cached.length
@@ -6424,8 +6256,8 @@ async function submitCheckout(){
     receipt:receipt || null,
     paymentStatus:method==="cod"?"cod":"pending",status:"new"
   };
-  const firebaseResult=await firebasePost(FIREBASE_ORDERS,order);
-  if(firebaseResult)order.firebaseId=firebaseResult.name;
+  const serverResult=await firebasePost(FIREBASE_ORDERS,order);
+  if(serverResult)order.serverId=serverResult.name;
   let orders=JSON.parse(localStorage.getItem("tahirOnlineOrders")||"[]");orders.unshift(order);localStorage.setItem("tahirOnlineOrders",JSON.stringify(orders));
   cart=[];saveCart();updateCart();closeCheckout();closeCart();
   alert("آپ کا آرڈر کامیابی سے درج ہوگیا۔ Order ID: "+order.id);
@@ -6676,14 +6508,21 @@ async function saveThemeSettings(){
   if(status){status.textContent="✓ تھیم اور رنگ کامیابی سے محفوظ ہوگئے۔";setTimeout(()=>status.textContent="",3000);}
 }
 
-function changeAdminPassword(){
+async function changeAdminPassword(){
   const a=document.getElementById("newAdminPassword")?.value||"";
   const b=document.getElementById("confirmAdminPassword")?.value||"";
   const st=document.getElementById("adminPasswordStatus");
   if(a.length<4){if(st)st.textContent="Password کم از کم 4 حروف کا ہونا چاہیے۔";return}
   if(a!==b){if(st)st.textContent="دونوں Password ایک جیسے ہونے چاہئیں۔";return}
+
+  const result = await firebasePut(HOSTINGER_ADMIN_PASSWORD, a);
+  if(result === null){
+    if(st)st.textContent="Password Hostinger Server پر محفوظ نہیں ہوا۔";
+    return;
+  }
+
   localStorage.setItem("tahirOnlineAdminPassword",a);
-  if(st){st.textContent="✓ Admin Password کامیابی سے تبدیل ہوگیا۔";setTimeout(()=>st.textContent="",3000)}
+  if(st){st.textContent="✓ Admin Password تمام devices کے لیے تبدیل ہوگیا۔";setTimeout(()=>st.textContent="",3000)}
   document.getElementById("newAdminPassword").value="";
   document.getElementById("confirmAdminPassword").value="";
 }
@@ -6802,8 +6641,8 @@ async function loadAdminSettings(){
 /* =====================================================
    ADMIN ORDERS + PRINT + PAYMENT STATUS
    ===================================================== */
-async function updatePaymentStatus(firebaseId,orderId,status){
-  if(firebaseId)await firebasePatch(FIREBASE_ORDERS+"/"+firebaseId,{paymentStatus:status});
+async function updatePaymentStatus(serverId,orderId,status){
+  if(serverId)await firebasePatch(FIREBASE_ORDERS+"/"+serverId,{paymentStatus:status});
   const orders=JSON.parse(localStorage.getItem("tahirOnlineOrders")||"[]");
   const o=orders.find(x=>x.id===orderId);if(o)o.paymentStatus=status;
   localStorage.setItem("tahirOnlineOrders",JSON.stringify(orders));loadOrders();
@@ -6825,11 +6664,11 @@ function loadOrders(){
       <td>${(o.items||[]).map(i=>`${escapeHtml(i.name)} × ${i.qty}`).join("<br>")}</td>
       <td class="english">Rs. ${Number(o.total||0).toLocaleString()}</td>
       <td>
-        <select onchange="changeOrderStatus('${escapeHtml(o.firebaseId||"")}','${escapeHtml(o.id||"")}',this.value)">
+        <select onchange="changeOrderStatus('${escapeHtml(o.serverId||"")}','${escapeHtml(o.id||"")}',this.value)">
           ${["new","processing","delivered","cancelled"].map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${s}</option>`).join("")}
         </select>
         <br><br>
-        <select onchange="updatePaymentStatus('${escapeHtml(o.firebaseId||"")}','${escapeHtml(o.id||"")}',this.value)">
+        <select onchange="updatePaymentStatus('${escapeHtml(o.serverId||"")}','${escapeHtml(o.id||"")}',this.value)">
           ${["pending","paid","failed","cod"].map(s=>`<option value="${s}" ${o.paymentStatus===s?"selected":""}>${s}</option>`).join("")}
         </select>
         <div style="font-size:12px;margin-top:6px">اکاؤنٹ: ${escapeHtml(o.paymentAccount||"")}</div>
@@ -6885,7 +6724,7 @@ displayProducts=function(products=getProducts()){_oldDisplayProducts(products);i
 /* Initial extensions */
 ensurePrintSheet();
 
-// Show categories immediately; Firebase then refreshes them in the background.
+// Show categories immediately; Hostinger Server then refreshes them in the background.
 if(!siteCategories.length){
   try{
     const cachedCategories=JSON.parse(localStorage.getItem("tahirOnlineCategories")||"null");
