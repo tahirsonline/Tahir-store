@@ -5830,13 +5830,15 @@ function categoriesToArray(data){
   return raw.map((c,i)=>normalizeCategory(c,i)).filter(Boolean);
 }
 function ensureUsableCategories(){
-  const usable=Array.isArray(siteCategories)
-    ? siteCategories.filter(c=>c && c.active!==false && String(c.id||"").trim() && String(c.name||c.nameEn||c.title||c.label||"").trim())
+  // Do NOT reactivate categories just because every category is inactive.
+  // Admin must be able to disable even the last visible category.
+  const normalized=Array.isArray(siteCategories)
+    ? siteCategories.map((c,i)=>normalizeCategory(c,i)).filter(Boolean)
     : [];
-  if(!usable.length){
+  if(!normalized.length){
     siteCategories=defaultCategories.map(x=>({...x}));
   }else{
-    siteCategories=siteCategories.map((c,i)=>normalizeCategory(c,i)).filter(Boolean);
+    siteCategories=normalized;
   }
   siteCategories.sort((a,b)=>Number(a.order||999)-Number(b.order||999));
   return siteCategories;
@@ -6075,8 +6077,22 @@ function loadAdminCategories(){
     </div>`).join("");
 }
 async function toggleCategory(id){
-  const c=categoryById(id);if(!c)return;c.active=c.active===false;
-  if(await saveCategory(c))loadAdminCategories();
+  const c=categoryById(id);
+  if(!c) return;
+  const previous=c.active;
+  c.active = (c.active === true) ? false : true;
+  const saved = await saveCategory(c);
+  if(!saved){
+    c.active = previous;
+    loadAdminCategories();
+    return;
+  }
+  // Immediately update the admin list and storefront. Do not reload from
+  // localStorage here because that can bring an older active state back.
+  localStorage.setItem("tahirOnlineCategories",JSON.stringify(siteCategories));
+  renderDynamicCategories();
+  populateCategorySelects();
+  loadAdminCategories();
 }
 async function changeCategoryImage(id,type,input){
   const file=input?.files?.[0]; if(!file)return;
