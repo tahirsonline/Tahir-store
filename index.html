@@ -3074,7 +3074,7 @@ const HOSTINGER_API = "/api.php";
 
 // Keep the old variable names so the rest of the existing website
 // continues to work, but these are now local Hostinger paths.
-const FIREBASE_DB = HOSTINGER_API;
+const FIREBASE_DB = "";
 const FIREBASE_PRODUCTS = "tahirOnlineStore/products";
 const FIREBASE_ORDERS = "tahirOnlineStore/orders";
 const FIREBASE_BANNERS = "tahirOnlineStore/banners";
@@ -3257,187 +3257,6 @@ const defaultProducts = [
 
 
 /* =====================================================
-   FIREBASE GET
-===================================================== */
-
-async function firebaseGet(path){
-
-    try{
-
-        const response =
-            await fetch(
-                path + ".json"
-            );
-
-        if(!response.ok){
-            throw new Error("Firebase GET failed");
-        }
-
-        return await response.json();
-
-    }catch(error){
-
-        console.error(error);
-
-        return null;
-    }
-}
-
-
-/* =====================================================
-   FIREBASE PUT
-===================================================== */
-
-async function firebasePut(
-    path,
-    data
-){
-    try{
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        let response;
-        try{
-            response = await fetch(path + ".json", {
-                method:"PUT",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify(data),
-                signal:controller.signal
-            });
-        }finally{
-            clearTimeout(timeout);
-        }
-        if(!response.ok){
-            throw new Error("Firebase PUT failed: " + response.status);
-        }
-        return await response.json();
-    }catch(error){
-        console.error(error);
-        if(error && error.name === "AbortError"){
-            alert("Firebase response میں 15 سیکنڈ سے زیادہ وقت لگ رہا ہے۔ Firebase Database URL یا Rules چیک کریں۔");
-        }else{
-            alert("Firebase میں data save نہیں ہو سکا۔");
-        }
-        return null;
-    }
-}
-
-
-/* =====================================================
-   FIREBASE POST
-===================================================== */
-
-async function firebasePost(
-    path,
-    data
-){
-
-    try{
-
-        const response =
-            await fetch(
-                path + ".json",
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":
-                        "application/json"
-                    },
-
-                    body:
-                        JSON.stringify(data)
-                }
-            );
-
-        if(!response.ok){
-            throw new Error("Firebase POST failed");
-        }
-
-        return await response.json();
-
-    }catch(error){
-
-        console.error(error);
-
-        alert(
-            "Order Database میں save نہیں ہو سکا۔"
-        );
-
-        return null;
-    }
-}
-
-
-/* =====================================================
-   FIREBASE PATCH
-===================================================== */
-
-async function firebasePatch(
-    path,
-    data
-){
-
-    try{
-
-        const response =
-            await fetch(
-                path + ".json",
-                {
-                    method:"PATCH",
-
-                    headers:{
-                        "Content-Type":
-                        "application/json"
-                    },
-
-                    body:
-                        JSON.stringify(data)
-                }
-            );
-
-        if(!response.ok){
-            throw new Error("Firebase PATCH failed");
-        }
-
-        return await response.json();
-
-    }catch(error){
-
-        console.error(error);
-
-        return null;
-    }
-}
-
-
-/* =====================================================
-   FIREBASE DELETE
-===================================================== */
-
-async function firebaseDelete(path){
-
-    try{
-
-        const response =
-            await fetch(
-                path + ".json",
-                {
-                    method:"DELETE"
-                }
-            );
-
-        return response.ok;
-
-    }catch(error){
-
-        console.error(error);
-
-        return false;
-    }
-}
-
-
-/* =====================================================
    PRODUCTS - LOCAL CACHE
    IMPORTANT: localStorage is only a cache.
    Firebase is always the source of truth.
@@ -3486,7 +3305,7 @@ function saveProductsLocal(products){
 }
 
 /* =====================================================
-   FIREBASE PRODUCTS -> ARRAY
+   SERVER PRODUCTS -> ARRAY
 ===================================================== */
 
 function firebaseProductsToArray(data){
@@ -3503,7 +3322,7 @@ function firebaseProductsToArray(data){
                 id: value.id ?? key
             }));
 
-    /* Firebase may already contain old duplicate records. Remove them
+    /* Server data may already contain old duplicate records. Remove them
        before rendering so one product can never create several cards. */
     const seenIds = new Set();
     const seenProducts = new Set();
@@ -3543,7 +3362,7 @@ async function saveProductToFirebase(product){
 }
 
 /* =====================================================
-   LOAD PRODUCTS FROM FIREBASE
+   LOAD PRODUCTS FROM HOSTINGER
 ===================================================== */
 
 async function loadProductsFromFirebase(options = {}){
@@ -3599,7 +3418,7 @@ async function loadProductsFromFirebase(options = {}){
 
 /* =====================================================
    SYNC PRODUCTS
-   Every browser/system periodically gets the latest Firebase data.
+   Every browser/system periodically gets the latest Hostinger data.
 ===================================================== */
 
 let productsSyncRunning = false;
@@ -6058,11 +5877,11 @@ applyUrduFont(document.body);
 renderHeroBanners();
 ensureUrduFontReady();
 
-/* Local cache is shown immediately while Firebase loads. */
+/* Local cache is shown immediately while Hostinger loads. */
 displayProducts(getProducts());
 updateCart();
 
-/* Firebase is the source of truth. */
+/* Hostinger server is the source of truth. */
 syncProductsFromFirebase();
 syncBannersFromFirebase();
 loadAboutStoreImage();
@@ -6074,8 +5893,8 @@ loadOrdersFromFirebase();
 /* =====================================================
    TAHIRONLINESTORE MULTI-CATEGORY ENGINE
    ===================================================== */
-const FIREBASE_CATEGORIES = FIREBASE_DB + "/tahirOnlineStore/categories";
-const FIREBASE_PAYMENT_SETTINGS = FIREBASE_DB + "/tahirOnlineStore/paymentSettings";
+const FIREBASE_CATEGORIES = "tahirOnlineStore/categories";
+const FIREBASE_PAYMENT_SETTINGS = "tahirOnlineStore/paymentSettings";
 
 const defaultCategories = [
   {id:"perfume",name:"پرفیوم",nameEn:"Perfumes",image:"https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=900&q=80",bannerImage:"https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1800&q=85",order:1,active:true},
