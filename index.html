@@ -3041,6 +3041,11 @@ Product Add کریں
 <div id="productSaveStatus" class="save-status">
 </div>
 
+<button type="button" id="syncLocalProductsBtn" class="gold-btn" style="background:#159447;margin-top:10px;" onclick="syncLocalProductsToServer()">
+Desktop Products Server پر منتقل کریں
+</button>
+<div id="productSyncStatus" class="save-status" style="margin-top:8px;"></div>
+
 </div>
 
 
@@ -3378,26 +3383,19 @@ async function loadProductsFromFirebase(options = {}){
     let products = firebaseProductsToArray(data);
 
     /*
-       IMPORTANT: Never seed/overwrite Firebase automatically when the
-       Products node is empty. A temporary empty response, a second tab,
-       or an old page can otherwise overwrite real products.
-       Keep the existing local/default products visible instead.
+       HOSTINGER IS THE SOURCE OF TRUTH.
+       An empty server must stay empty; never substitute this browser's
+       local/default products. Use the Admin migration button once to
+       move desktop-only products to the Hostinger server.
     */
     if(!products.length){
-        const localProducts = getProducts();
-        products = localProducts.length
-            ? localProducts
-            : defaultProducts.map(product => ({...product}));
-
-        displayProducts(products);
+        displayProducts([]);
         loadAdminProducts();
 
         const totalProducts = document.getElementById("totalProducts");
-        if(totalProducts){
-            totalProducts.textContent = products.length;
-        }
+        if(totalProducts) totalProducts.textContent = "0";
 
-        return products;
+        return [];
     }
 
     const oldProducts = getProducts();
@@ -3414,6 +3412,77 @@ async function loadProductsFromFirebase(options = {}){
     }
 
     return products;
+}
+
+/* =====================================================
+   ONE-TIME LOCAL -> HOSTINGER PRODUCT MIGRATION
+   Safe merge: existing server products are never deleted/overwritten.
+===================================================== */
+function productMigrationKey(product){
+    return [
+        String(product?.name ?? "").trim().toLowerCase(),
+        String(product?.category ?? "").trim().toLowerCase(),
+        String(product?.description ?? "").trim().toLowerCase(),
+        String(product?.price ?? ""),
+        String(product?.oldPrice ?? ""),
+        JSON.stringify(product?.prices ?? {})
+    ].join("||");
+}
+
+function makeMigrationId(usedIds){
+    let id = Date.now();
+    while(usedIds.has(String(id))) id += 1;
+    return id;
+}
+
+async function syncLocalProductsToServer(){
+    const btn = document.getElementById("syncLocalProductsBtn");
+    const status = document.getElementById("productSyncStatus");
+    if(btn) btn.disabled = true;
+    if(status) status.textContent = "Server data چیک ہو رہا ہے...";
+
+    try{
+        const localProducts = getProducts().map(p => ({...p}));
+        if(!localProducts.length){
+            if(status) status.textContent = "اس browser میں منتقل کرنے کے لیے کوئی local product نہیں ملا۔";
+            return;
+        }
+
+        const serverData = await firebaseGet(FIREBASE_PRODUCTS);
+        if(serverData === null) throw new Error("Server products read failed");
+
+        const serverProducts = firebaseProductsToArray(serverData);
+        const existingKeys = new Set(serverProducts.map(productMigrationKey));
+        const usedIds = new Set(serverProducts.map(p => String(p?.id ?? "")));
+        let added = 0, skipped = 0;
+
+        for(const original of localProducts){
+            const key = productMigrationKey(original);
+            if(existingKeys.has(key)){ skipped++; continue; }
+
+            const product = {...original};
+            if(!product.id || usedIds.has(String(product.id))){
+                product.id = makeMigrationId(usedIds);
+            }
+
+            const result = await saveProductToFirebase(product);
+            if(result === null) throw new Error("Migration failed: " + (product.name || "product"));
+
+            usedIds.add(String(product.id));
+            existingKeys.add(key);
+            added++;
+            if(status) status.textContent = `منتقلی جاری ہے: ${added} product محفوظ ہو چکے ہیں...`;
+        }
+
+        await loadProductsFromFirebase();
+        if(status) status.textContent = `✓ مکمل: ${added} نئے product server پر منتقل ہوئے، ${skipped} پہلے سے موجود تھے۔ اب یہی data تمام devices پر آئے گا۔`;
+    }catch(error){
+        console.error("Product migration error:", error);
+        if(status) status.textContent = "Migration مکمل نہیں ہوئی۔ Server connection چیک کریں۔";
+        alert("Desktop products server پر منتقل نہیں ہو سکے۔ موجودہ server products محفوظ ہیں۔");
+    }finally{
+        if(btn) btn.disabled = false;
+    }
 }
 
 /* =====================================================
@@ -5210,7 +5279,7 @@ async function addProduct(){
            appear stuck for a long time. */
         const result = await saveProductToFirebase(product);
         if(result === null){
-            throw new Error("Firebase save failed");
+            throw new Error("Hostinger save failed");
         }
 
         /* Update this browser immediately from the product just saved. */
@@ -5235,13 +5304,13 @@ async function addProduct(){
         if(preview) preview.style.display="none";
 
         if(status){
-            status.textContent = "✓ Product Firebase میں کامیابی سے Save ہو گیا۔";
+            status.textContent = "✓ Product Hostinger server میں کامیابی سے Save ہو گیا۔";
             setTimeout(()=>{ status.textContent=""; },3000);
         }
     }catch(error){
         console.error("Add Product Error:", error);
         if(status) status.textContent = "Product Save نہیں ہو سکا۔ دوبارہ کوشش کریں۔";
-        alert("Product Save نہیں ہو سکا۔ Firebase یا Image کی وجہ سے مسئلہ آیا ہے۔");
+        alert("Product Save نہیں ہو سکا۔ Hostinger server یا Image کی وجہ سے مسئلہ آیا ہے۔");
     }finally{
         if(btn){
             btn.disabled = false;
@@ -5544,7 +5613,7 @@ async function updateProduct(){
         const result = await saveProductToFirebase(product);
 
         if(result === null){
-            alert("Product Firebase میں Update نہیں ہوا۔");
+            alert("Product Hostinger server میں Update نہیں ہوا۔");
             return;
         }
 
@@ -6846,3 +6915,5 @@ loadThemeSettings();
 
 </body>
 </html>
+
+
