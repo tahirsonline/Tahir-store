@@ -3067,31 +3067,81 @@ Product Add کریں
 <script>
 
 /* =====================================================
-   FIREBASE DATABASE
+   HOSTINGER DATABASE (Firebase removed)
 ===================================================== */
 
-const FIREBASE_DB =
-    "https://traindawateislami-default-rtdb.firebaseio.com";
+const HOSTINGER_API = "/api.php";
 
+// Keep the old variable names so the rest of the existing website
+// continues to work, but these are now local Hostinger paths.
+const FIREBASE_DB = HOSTINGER_API;
+const FIREBASE_PRODUCTS = "tahirOnlineStore/products";
+const FIREBASE_ORDERS = "tahirOnlineStore/orders";
+const FIREBASE_BANNERS = "tahirOnlineStore/banners";
+const FIREBASE_SETTINGS = "tahirOnlineStore/settings";
 
-const FIREBASE_PRODUCTS =
-    FIREBASE_DB +
-    "/tahirOnlineStore/products";
+function hostingerPath(path){
+    let p = String(path || "").trim();
+    p = p.replace(/^https?:\/\/[^/]+/, "");
+    p = p.replace(/^\/+|\/+$/g, "");
+    p = p.replace(/\.json$/i, "");
+    return p;
+}
 
+async function hostingerRequest(action, path, data = null){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try{
+        const body = { action, path: hostingerPath(path) };
+        if(action !== "get" && action !== "delete") body.data = data;
 
-const FIREBASE_ORDERS =
-    FIREBASE_DB +
-    "/tahirOnlineStore/orders";
+        const response = await fetch(HOSTINGER_API, {
+            method: "POST",
+            headers: {"Content-Type":"application/json", "Accept":"application/json"},
+            body: JSON.stringify(body),
+            signal: controller.signal,
+            cache: "no-store"
+        });
 
+        const text = await response.text();
+        let result = null;
+        try{ result = text ? JSON.parse(text) : null; }catch(e){
+            throw new Error("Hostinger API نے JSON جواب نہیں دیا۔");
+        }
 
-const FIREBASE_BANNERS =
-    FIREBASE_DB +
-    "/tahirOnlineStore/banners";
+        if(!response.ok || !result || result.ok !== true){
+            throw new Error(result?.error || ("Hostinger API error " + response.status));
+        }
+        return result.data;
+    }catch(error){
+        console.error("Hostinger API:", error);
+        if(error?.name === "AbortError") alert("Hostinger server جواب نہیں دے رہا۔ 15 سیکنڈ بعد کوشش ختم کر دی گئی۔");
+        return null;
+    }finally{
+        clearTimeout(timer);
+    }
+}
 
-const FIREBASE_SETTINGS =
-    FIREBASE_DB +
-    "/tahirOnlineStore/settings";
+/* Compatibility wrappers: the rest of the site can keep its existing names. */
+async function firebaseGet(path){
+    return await hostingerRequest("get", path);
+}
 
+async function firebasePut(path, data){
+    return await hostingerRequest("put", path, data);
+}
+
+async function firebasePost(path, data){
+    return await hostingerRequest("post", path, data);
+}
+
+async function firebasePatch(path, data){
+    return await hostingerRequest("patch", path, data);
+}
+
+async function firebaseDelete(path){
+    return (await hostingerRequest("delete", path)) === true;
+}
 
 /* =====================================================
    DEFAULT PRODUCTS
@@ -3509,28 +3559,26 @@ async function loadProductsFromFirebase(options = {}){
     let products = firebaseProductsToArray(data);
 
     /*
-       If Firebase is completely empty, initialize it once with
-       the default products. This happens only when the database
-       has no products at all.
+       IMPORTANT: Never seed/overwrite Firebase automatically when the
+       Products node is empty. A temporary empty response, a second tab,
+       or an old page can otherwise overwrite real products.
+       Keep the existing local/default products visible instead.
     */
     if(!products.length){
-        products = defaultProducts.map(product => ({...product}));
+        const localProducts = getProducts();
+        products = localProducts.length
+            ? localProducts
+            : defaultProducts.map(product => ({...product}));
 
-        const seedObject = {};
-        products.forEach(product => {
-            seedObject[String(product.id)] = product;
-        });
+        displayProducts(products);
+        loadAdminProducts();
 
-        const seeded = await firebasePut(
-            FIREBASE_PRODUCTS,
-            seedObject
-        );
-
-        if(seeded === null){
-            displayProducts(getProducts());
-            loadAdminProducts();
-            return getProducts();
+        const totalProducts = document.getElementById("totalProducts");
+        if(totalProducts){
+            totalProducts.textContent = products.length;
         }
+
+        return products;
     }
 
     const oldProducts = getProducts();
