@@ -3108,32 +3108,54 @@ function hostingerPath(path){
 
 async function hostingerRequest(action, path, data = null){
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+
+    // Shared Hostinger hosting can take longer when product images/data are large.
+    // 60 seconds prevents the browser from cancelling a valid request too early.
+    const timer = setTimeout(() => controller.abort(), 60000);
+
     try{
         const body = { action, path: hostingerPath(path) };
         if(action !== "get" && action !== "delete") body.data = data;
 
         const response = await fetch(HOSTINGER_API, {
             method: "POST",
-            headers: {"Content-Type":"application/json", "Accept":"application/json"},
+            headers: {
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
             body: JSON.stringify(body),
             signal: controller.signal,
-            cache: "no-store"
+            cache: "no-store",
+            credentials: "same-origin"
         });
 
         const text = await response.text();
         let result = null;
-        try{ result = text ? JSON.parse(text) : null; }catch(e){
-            throw new Error("Hostinger API نے JSON جواب نہیں دیا۔");
+
+        try{
+            result = text ? JSON.parse(text) : null;
+        }catch(e){
+            console.error("Hostinger API raw response:", text);
+            throw new Error("Hostinger API نے درست JSON جواب نہیں دیا۔ api.php چیک کریں۔");
         }
 
         if(!response.ok || !result || result.ok !== true){
-            throw new Error(result?.error || ("Hostinger API error " + response.status));
+            throw new Error(
+                result?.error ||
+                ("Hostinger API error " + response.status)
+            );
         }
+
         return result.data;
     }catch(error){
         console.error("Hostinger API:", error);
-        if(error?.name === "AbortError") alert("Hostinger server جواب نہیں دے رہا۔ 15 سیکنڈ بعد کوشش ختم کر دی گئی۔");
+
+        if(error?.name === "AbortError"){
+            alert("Hostinger server کا جواب بہت دیر سے آ رہا ہے۔ 60 سیکنڈ بعد Request بند کی گئی۔ api.php / database performance چیک کریں۔");
+        }else{
+            alert("Hostinger API مسئلہ: " + (error?.message || "Unknown error"));
+        }
+
         return null;
     }finally{
         clearTimeout(timer);
@@ -5072,7 +5094,7 @@ async function addProduct(){
             reader.onload = () => {
                 const img = new Image();
                 img.onload = () => {
-                    const maxSize = 1000;
+                    const maxSize = 800;
                     let w = img.naturalWidth || img.width;
                     let h = img.naturalHeight || img.height;
                     if(w > maxSize || h > maxSize){
@@ -5084,7 +5106,7 @@ async function addProduct(){
                     canvas.width = w; canvas.height = h;
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, w, h);
-                    resolve(canvas.toDataURL("image/jpeg", 0.78));
+                    resolve(canvas.toDataURL("image/jpeg", 0.68));
                 };
                 img.onerror = () => reject(new Error("Image decode failed"));
                 img.src = reader.result;
@@ -5782,14 +5804,21 @@ ensureUrduFontReady();
 displayProducts(getProducts());
 updateCart();
 
-/* Hostinger server is the source of truth. */
-syncProductsFromFirebase();
-syncBannersFromFirebase();
-loadAboutStoreImage();
-loadContactSettings();
-
-/* Hostinger Server سے Orders */
-loadOrdersFromFirebase();
+/* Hostinger server is the source of truth.
+   Load server sections one-by-one so shared hosting is not hit
+   by several heavy PHP requests at exactly the same time. */
+async function initializeHostingerData(){
+    try{
+        await syncProductsFromFirebase();
+        await syncBannersFromFirebase();
+        await loadAboutStoreImage();
+        await loadContactSettings();
+        await loadOrdersFromFirebase();
+    }catch(error){
+        console.error("Initial Hostinger load error:", error);
+    }
+}
+initializeHostingerData();
 
 /* =====================================================
    TAHIRONLINESTORE MULTI-CATEGORY ENGINE
