@@ -751,9 +751,12 @@ nav{
 
 .product-img{
     width:100%;
-    height:270px;
+    height:270px !important;
+    min-height:270px;
     object-fit:cover;
     display:block;
+    background:#f7f3ea;
+    flex:none;
 }
 
 .product-info{
@@ -1787,7 +1790,7 @@ html[data-theme="custom"] .category,html[data-theme="custom"] .product,html[data
         <span class="store-brand-ur only-ur">طاہر آن لائن سٹور</span>
         <span class="store-brand-en only-en">TAHIR ONLINE STORE</span>
     </span>
-</a>
+</div>
 
 
 <div class="search">
@@ -4198,6 +4201,95 @@ function confirmSizeAndCheckout(){
   checkout();
 }
 
+/* =====================================================
+   ROBUST PRODUCT IMAGE HANDLING
+   Supports normal URLs, data URLs and older/object-shaped
+   image records. Broken images get a local inline fallback.
+===================================================== */
+function normalizeImageSource(raw){
+    if(raw === null || raw === undefined) return "";
+
+    let value = raw;
+
+    if(typeof value === "object"){
+        value = value.data || value.url || value.src || value.image ||
+                value.downloadURL || value.downloadUrl || "";
+    }
+
+    if(typeof value !== "string") return "";
+    value = value.trim();
+
+    /* Some older records may contain a JSON-encoded image object/string. */
+    if((value.startsWith("{") && value.endsWith("}")) ||
+       (value.startsWith('"') && value.endsWith('"'))){
+        try{
+            const parsed = JSON.parse(value);
+            if(typeof parsed === "string") value = parsed.trim();
+            else if(parsed && typeof parsed === "object"){
+                value = String(
+                    parsed.data || parsed.url || parsed.src || parsed.image ||
+                    parsed.downloadURL || parsed.downloadUrl || ""
+                ).trim();
+            }
+        }catch(e){}
+    }
+
+    /* Remove accidental whitespace/newlines from data URLs. */
+    if(/^data:image\\//i.test(value)){
+        value = value.replace(/\\s+/g,"");
+    }
+
+    if(value.startsWith("//")) value = location.protocol + value;
+
+    // Older products may already contain a relative Hostinger image path.
+    // Route those images through api.php so they remain visible even when
+    // direct access to the writable data/images folder is restricted.
+    const cleanPath = value.replace(/^\.\//, "");
+    if(/^\/?data\/images\//i.test(cleanPath)){
+        const fileName = cleanPath.split("/").pop();
+        if(fileName) value = "api.php?image=" + encodeURIComponent(fileName);
+    }
+
+    return value;
+}
+
+function productFallbackImage(product){
+    const name = String(productDisplayName(product) || product?.name || "TAHIR ONLINE STORE");
+    const shortName = name.length > 18 ? name.slice(0,18) + "…" : name;
+
+    const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="900" viewBox="0 0 800 900">`+
+        `<rect width="800" height="900" fill="#f7f3ea"/>`+
+        `<circle cx="400" cy="390" r="180" fill="#111"/>`+
+        `<path d="M285 310h230l-28 250H313z" fill="#c79b3b"/>`+
+        `<rect x="345" y="235" width="110" height="85" rx="12" fill="#111"/>`+
+        `<rect x="335" y="365" width="130" height="105" rx="8" fill="#fff"/>`+
+        `<text x="400" y="410" text-anchor="middle" font-family="Arial" font-size="22" font-weight="700" fill="#111">TAHIR</text>`+
+        `<text x="400" y="445" text-anchor="middle" font-family="Arial" font-size="16" fill="#777">ONLINE STORE</text>`+
+        `<text x="400" y="675" text-anchor="middle" font-family="Arial" font-size="28" font-weight="700" fill="#111">${escapeXmlForSvg(shortName)}</text>`+
+        `</svg>`;
+
+    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+}
+
+function escapeXmlForSvg(value){
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&apos;");
+}
+
+function productImageHtml(product, className="product-img"){
+    const src = normalizeImageSource(product?.image);
+    const fallback = productFallbackImage(product);
+    const safeSrc = escapeHtml(src || fallback);
+    const safeFallback = escapeHtml(fallback);
+    const name = escapeHtml(productDisplayName(product));
+    return `<img class="${className}" src="${safeSrc}" alt="${name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${safeFallback}'">`;
+}
+
 function displayProducts(products = getProducts()){
     const grid = document.getElementById("productGrid");
     const number = document.getElementById("productNumber");
@@ -4212,13 +4304,13 @@ function displayProducts(products = getProducts()){
         if(product.oldPrice && Number(product.oldPrice) > Number(product.price)){
             discount = Math.round(((Number(product.oldPrice)-Number(product.price))/Number(product.oldPrice))*100);
         }
-        const image = escapeHtml(product.image || "");
+        const imageHtml = productImageHtml(product, "product-img");
         const name = escapeHtml(productDisplayName(product));
         const description = escapeHtml(productDisplayDescription(product));
         const id = String(product.id);
         const addText = document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
         const sizePrices=formatSizePrices(product);
-        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}<img class="product-img" src="${image}" alt="${name}" loading="lazy"><div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="size-price-list">${sizePrices}</div><div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${JSON.stringify(id)})">${addText}</button></div></div>`;
+        return `<div class="product">${discount>0?`<span class="sale">-${discount}%</span>`:""}${imageHtml}<div class="product-info"><div class="stars">★★★★★</div><div class="product-name">${name}</div><div class="product-desc">${description}</div><div class="size-price-list">${sizePrices}</div><div class="price"><span class="new-price">${hasSizePrices(product)?"Size Wise Prices":"Rs. "+Number(product.price||0).toLocaleString()}</span>${product.oldPrice?`<span class="old-price">Rs. ${Number(product.oldPrice).toLocaleString()}</span>`:""}</div><button class="add-btn" onclick="addToCart(${JSON.stringify(id)})">${addText}</button></div></div>`;
     }).join("");
     grid.innerHTML = html;
     if(number) number.textContent = products.length + " Products";
@@ -6012,7 +6104,7 @@ function categoryProductCard(product){
   const addText=document.documentElement.lang === "en" ? "Add to Cart" : "کارٹ میں شامل کریں";
   return `<div class="product">
     ${discount?`<span class="sale">-${discount}%</span>`:""}
-    <img class="category-mini-image" src="${escapeHtml(product.image||"")}" alt="${escapeHtml(name)}">
+    ${productImageHtml(product, "category-mini-image")}
     <div class="product-info">
       <div class="stars">★★★★★</div>
       <div class="product-name">${escapeHtml(name)}</div>
