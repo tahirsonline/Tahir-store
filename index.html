@@ -1,415 +1,176 @@
 <!DOCTYPE html>
 <html lang="ur" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp Cloud Backup Viewer</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واٹس ایپ ویب - سنگل فائل ایپ</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #dadada; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .whatsapp-container { display: flex; width: 95%; max-width: 1100px; height: 90vh; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-radius: 10px; overflow: hidden; }
+        
+        /* سائیڈ بار */
+        .sidebar { width: 35%; border-left: 1px solid #ddd; background: #f8f9fa; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: #00a884; color: white; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .user-list { overflow-y: auto; flex: 1; }
+        .user-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; }
+        .user-item:hover, .user-item.active { background: #f0f2f5; }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-left: 15px; font-size: 18px; }
+        .user-info h4 { font-size: 16px; color: #333; }
+        .user-info p { font-size: 13px; color: #666; margin-top: 3px; }
 
-    body {
-      margin: 0;
-      background: #f0f2f5;
-      color: #111b21;
-      font-family: "Noto Nastaliq Urdu", "Segoe UI", Arial, sans-serif;
-    }
+        /* چیٹ ونڈو */
+        .chat-window { width: 65%; display: flex; flex-direction: column; background: #efeae2; }
+        .chat-header { padding: 15px; background: #f0f2f5; border-bottom: 1px solid #ddd; display: flex; align-items: center; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        .message { max-width: 65%; padding: 10px 14px; border-radius: 8px; position: relative; word-wrap: break-word; font-size: 14px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .message.sent { background: #d9fdd3; align-self: flex-end; border-top-left-radius: 0; }
+        .message.received { background: #fff; align-self: flex-start; border-top-right-radius: 0; }
+        .message small { display: block; font-size: 10px; color: #777; text-align: left; margin-top: 4px; }
+        
+        /* ان پٹ ایریا */
+        .chat-input-area { padding: 12px 15px; background: #f0f2f5; display: flex; align-items: center; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border: none; border-radius: 20px; outline: none; font-size: 14px; background: #fff; }
+        .chat-input-area button { background: #00a884; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: 0.2s; }
+        .chat-input-area button:hover { background: #01876f; }
 
-    button, input {
-      font: inherit;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    .header {
-      padding: 30px 20px;
-      background: linear-gradient(135deg, #00a884, #005c4b);
-      color: white;
-      text-align: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .header h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-    }
-
-    .header p {
-      margin: 0;
-      opacity: 0.9;
-    }
-
-    .container {
-      width: min(1200px, calc(100% - 30px));
-      margin: 25px auto;
-    }
-
-    .card {
-      margin-bottom: 20px;
-      padding: 24px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-
-    .card h2 {
-      margin-top: 0;
-      color: #005c4b;
-      font-size: 20px;
-    }
-
-    .login-box {
-      text-align: center;
-      padding: 30px;
-    }
-
-    .btn {
-      min-height: 45px;
-      padding: 10px 20px;
-      border: 0;
-      border-radius: 8px;
-      background: #00a884;
-      color: white;
-      font-weight: 700;
-      transition: background 0.2s;
-    }
-
-    .btn:hover {
-      background: #008f6f;
-    }
-
-    .btn.google {
-      background: #db4437;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .btn.google:hover {
-      background: #c23321;
-    }
-
-    .dashboard {
-      display: none;
-    }
-
-    .overview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      padding: 18px;
-      background: #fcfdfe;
-      border: 1px solid #e9edef;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .stat-card .icon {
-      font-size: 28px;
-    }
-
-    .stat-card strong {
-      display: block;
-      margin: 6px 0;
-      color: #00a884;
-      font-size: 24px;
-    }
-
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #f0f2f5;
-      padding-bottom: 10px;
-    }
-
-    .tab-btn {
-      padding: 10px 16px;
-      border: 1px solid #d1d7db;
-      border-radius: 8px;
-      background: white;
-      color: #54656f;
-      font-weight: 600;
-    }
-
-    .tab-btn.active {
-      background: #00a884;
-      color: white;
-      border-color: #00a884;
-    }
-
-    .tab-panel {
-      display: none;
-    }
-
-    .tab-panel.active {
-      display: block;
-    }
-
-    .media-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 15px;
-    }
-
-    .media-item {
-      padding: 15px;
-      background: #f8f9fa;
-      border: 1px solid #e9edef;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .media-preview {
-      width: 100%;
-      height: 110px;
-      display: grid;
-      place-items: center;
-      background: #e9edef;
-      border-radius: 8px;
-      font-size: 36px;
-      margin-bottom: 10px;
-    }
-
-    .file-name {
-      display: block;
-      font-size: 14px;
-      margin-bottom: 10px;
-      direction: ltr;
-      color: #3b4a54;
-      overflow-wrap: anywhere;
-    }
-
-    .table-wrapper {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 600px;
-    }
-
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #f0f2f5;
-      text-align: right;
-    }
-
-    th {
-      background: #f0f2f5;
-      color: #005c4b;
-    }
-
-    .user-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-  </style>
+        /* رسپانسو ڈیزائن موبائیل کے لیے */
+        @media(max-width: 768px) {
+            .whatsapp-container { width: 100%; height: 100vh; border-radius: 0; }
+            .sidebar { width: 100%; }
+            .chat-window { display: none; width: 100%; }
+            .whatsapp-container.active-chat .sidebar { display: none; }
+            .whatsapp-container.active-chat .chat-window { display: flex; }
+        }
+    </style>
 </head>
 <body>
 
-  <header class="header">
-    <h1>☁️ WhatsApp Cloud Backup Viewer</h1>
-    <p>اپنی گوگل آئی ڈی سے لاگ ان کریں اور واٹس ایپ کا تمام بیک اپ آن لائن دیکھیں</p>
-  </header>
-
-  <main class="container">
-    <!-- Login Section -->
-    <section class="card login-box" id="loginSection">
-      <h2>🔐 گوگل اکاؤنٹ سے لاگ ان کریں</h2>
-      <p style="margin-bottom: 20px; color: #666;">اپنا وہ جی میل اکاؤنٹ کنیکٹ کریں جس پر آپ کا واٹس ایپ بیک اپ موجود ہے۔</p>
-      <button class="btn google" type="button" onclick="simulateLogin()">
-        <span>🌐 Sign in with Google</span>
-      </button>
-    </section>
-
-    <!-- Main Dashboard (Hidden until login) -->
-    <div class="dashboard" id="dashboardSection">
-      
-      <!-- User Profile & Status -->
-      <section class="card">
-        <div class="user-info">
-          <div>
-            <h2>👤 منسلک گوگل اکاؤنٹ</h2>
-            <p id="loggedInEmail" style="margin: 0; color: #00a884; font-weight: bold; direction: ltr; text-align: right;"></p>
-          </div>
-          <button class="btn" style="background: #ea4335;" type="button" onclick="logout()">لاگ آؤٹ</button>
-        </div>
-      </section>
-
-      <!-- Overview Stats -->
-      <section class="card">
-        <h2>📊 بیک اپ ڈیٹا کا خلاصہ</h2>
-        <div class="overview-grid">
-          <div class="stat-card">
-            <span class="icon">🖼️</span>
-            <strong>142</strong>
-            <span>تصاویر (Photos)</span>
-          </div>
-          <div class="stat-card">
-            <span class="icon">🎥</span>
-            <strong>38</strong>
-            <span>ویڈیوز (Videos)</span>
-          </div>
-          <div class="stat-card">
-            <span class="icon">🎙️</span>
-            <strong>65</strong>
-            <span>وائس نوٹس (Voice Notes)</span>
-          </div>
-          <div class="stat-card">
-            <span class="icon">📄</span>
-            <strong>19</strong>
-            <span>ڈاکومنٹس (Documents)</span>
-          </div>
-          <div class="stat-card">
-            <span class="icon">📞</span>
-            <strong>94</strong>
-            <span>کال ہسٹری (Call History)</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Detailed Files Viewer -->
-      <section class="card">
-        <h2>📁 بیک اپ فائلز اور ہسٹری</h2>
-
-        <div class="tabs">
-          <button class="tab-btn active" type="button" onclick="switchTab('photos', this)">🖼️ تصاویر</button>
-          <button class="tab-btn" type="button" onclick="switchTab('videos', this)">🎥 ویڈیوز</button>
-          <button class="tab-btn" type="button" onclick="switchTab('voices', this)">🎙️ وائس نوٹس</button>
-          <button class="tab-btn" type="button" onclick="switchTab('docs', this)">📄 ڈاکومنٹس</button>
-          <button class="tab-btn" type="button" onclick="switchTab('calls', this)">📞 کال ہسٹری</button>
-        </div>
-
-        <!-- Photos Tab -->
-        <div class="tab-panel active" id="photos">
-          <div class="media-grid">
-            <div class="media-item">
-              <div class="media-preview">🖼️</div>
-              <span class="file-name">WhatsApp_Image_2026-01.jpg</span>
-              <button class="btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('تصویر ڈاؤن لوڈ ہو رہی ہے')">ڈاؤن لوڈ</button>
+    <div class="whatsapp-container" id="appContainer">
+        <!-- سائیڈ بار (دوستوں کی لسٹ) -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span>💬 واٹس ایپ چیٹ ایپ</span>
+                <span style="font-size: 12px; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 4px;">لائیو</span>
             </div>
-            <div class="media-item">
-              <div class="media-preview">🖼️</div>
-              <span class="file-name">WhatsApp_Image_2026-02.jpg</span>
-              <button class="btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('تصویر ڈاؤن لوڈ ہو رہی ہے')">ڈاؤن لوڈ</button>
+            <div class="user-list" id="userList">
+                <!-- جاوا اسکریپٹ کے ذریعے یوزر یہاں آئیں گے -->
             </div>
-          </div>
         </div>
 
-        <!-- Videos Tab -->
-        <div class="tab-panel" id="videos">
-          <div class="media-grid">
-            <div class="media-item">
-              <div class="media-preview">▶️</div>
-              <span class="file-name">VID-2026-WA001.mp4</span>
-              <button class="btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('ویڈیو پلے کی جا رہی ہے')">چلائیں</button>
+        <!-- چیٹ ایریا -->
+        <div class="chat-window">
+            <div class="chat-header" id="chatHeader">
+                <div class="avatar" id="activeAvatar" style="background: #00a884;">U</div>
+                <div class="user-info">
+                    <h4 id="activeUsername">چیٹ منتخب کریں</h4>
+                    <p id="activeStatus">آن لائن</p>
+                </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Voice Notes Tab -->
-        <div class="tab-panel" id="voices">
-          <div class="media-grid">
-            <div class="media-item">
-              <div class="media-preview">🎙️</div>
-              <span class="file-name">Aud-2026-Voice.opus</span>
-              <button class="btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('وائس نوٹ پلے ہو رہا ہے')">سنیں</button>
+            <div class="chat-messages" id="chatMessages">
+                <div style="text-align: center; color: #777; margin-top: 50px;">گفتگو شروع کرنے کے لیے سائیڈ بار سے کسی دوست پر کلک کریں۔</div>
             </div>
-          </div>
-        </div>
-
-        <!-- Documents Tab -->
-        <div class="tab-panel" id="docs">
-          <div class="media-grid">
-            <div class="media-item">
-              <div class="media-preview">📄</div>
-              <span class="file-name">Invoice_Report_2026.pdf</span>
-              <button class="btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('ڈاکومنٹ اوپن ہو رہا ہے')">دیکھیں</button>
+            <div class="chat-input-area" id="inputArea" style="display: none;">
+                <input type="text" id="messageInput" placeholder="پیغام یہاں لکھیں..." autocomplete="off">
+                <button onclick="sendMessage()">➤</button>
             </div>
-          </div>
         </div>
-
-        <!-- Call History Tab -->
-        <div class="tab-panel" id="calls">
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>رابطہ / نام</th>
-                  <th>تاریخ</th>
-                  <th>وقت</th>
-                  <th>قسم</th>
-                  <th>دورانیہ</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Ali Khan - 03001234567</td>
-                  <td>09-10-2026</td>
-                  <td>02:30 PM</td>
-                  <td>Incoming (موصول شدہ)</td>
-                  <td>05:12 منٹ</td>
-                </tr>
-                <tr>
-                  <td>Bilal Ahmed - 03219876543</td>
-                  <td>08-10-2026</td>
-                  <td>11:15 AM</td>
-                  <td>Outgoing (کی گئی کال)</td>
-                  <td>02:45 منٹ</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </section>
-
     </div>
-  </main>
 
-  <script>
-    function simulateLogin() {
-      // فرضی گوگل لاگ ان پرومپٹ
-      let email = prompt("اپنا گوگل اکاؤنٹ (Gmail ID) درج کریں:", "user@gmail.com");
-      if (email && email.includes("@")) {
-        document.getElementById("loggedInEmail").textContent = email;
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("dashboardSection").style.display = "block";
-      } else if (email !== null) {
-        alert("براہ کرم درست جی میل آئی ڈی درج کریں۔");
-      }
-    }
+    <script>
+        const users = [
+            { id: 1, name: "علی خان", status: "آن لائن", color: "#e91e63" },
+            { id: 2, name: "محمد احمد", status: "آخری بار دیکھا گیا 2 بجے", color: "#3f51b5" },
+            { id: 3, name: "فاطمہ بی بی", status: "آن لائن", color: "#009688" },
+            { id: 4, name: "ٹیکنالوجی گروپ", status: "3 اراکین", color: "#ff9800" }
+        ];
 
-    function logout() {
-      document.getElementById("dashboardSection").style.display = "none";
-      document.getElementById("loginSection").style.display = "block";
-    }
+        let currentUserId = null;
+        // لوکل اسٹوریج سے پرانے میسجز لوڈ کرنا
+        let messages = JSON.parse(localStorage.getItem('whatsapp_messages')) || {};
 
-    function switchTab(tabId, btn) {
-      document.querySelectorAll(".tab-panel").forEach(panel => {
-        panel.classList.remove("active");
-      });
-      document.querySelectorAll(".tab-btn").forEach(button => {
-        button.classList.remove("active");
-      });
+        function renderUsers() {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+            users.forEach(user => {
+                let div = document.createElement('div');
+                div.className = `user-item ${currentUserId === user.id ? 'active' : ''}`;
+                div.onclick = () => selectUser(user.id);
+                div.innerHTML = `
+                    <div class="avatar" style="background: ${user.color}">${user.name.charAt(0)}</div>
+                    <div class="user-info">
+                        <h4>${user.name}</h4>
+                        <p>${user.status}</p>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
 
-      document.getElementById(tabId).classList.add("active");
-      btn.classList.add("active");
-    }
-  </script>
+        function selectUser(userId) {
+            currentUserId = userId;
+            let user = users.find(u => u.id === userId);
+            
+            document.getElementById('activeAvatar').innerText = user.name.charAt(0);
+            document.getElementById('activeAvatar').style.background = user.color;
+            document.getElementById('activeUsername').innerText = user.name;
+            document.getElementById('activeStatus').innerText = user.status;
+            document.getElementById('inputArea').style.display = 'flex';
+            
+            document.getElementById('appContainer').classList.add('active-chat');
+            renderMessages();
+            renderUsers();
+        }
 
+        function renderMessages() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            
+            if (!messages[currentUserId]) {
+                messages[currentUserId] = [];
+            }
+
+            messages[currentUserId].forEach(msg => {
+                let div = document.createElement('div');
+                div.className = `message ${msg.sender}`;
+                let time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                div.innerHTML = `${msg.text} <small>${time}</small>`;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMessage() {
+            let input = document.getElementById('messageInput');
+            let text = input.value.trim();
+            if (!text || !currentUserId) return;
+
+            // صارف کا پیغام شامل کریں
+            if (!messages[currentUserId]) messages[currentUserId] = [];
+            messages[currentUserId].push({ sender: 'sent', text: text, time: new Date().getTime() });
+            
+            input.value = '';
+            renderMessages();
+            localStorage.setItem('whatsapp_messages', JSON.stringify(messages));
+
+            // خودکار ریپلائی بوট (Auto Reply simulation)
+            setTimeout(() => {
+                messages[currentUserId].push({ sender: 'received', text: "موصول ہو گیا! شکریہ۔ 👍", time: new Date().getTime() });
+                renderMessages();
+                localStorage.setItem('whatsapp_messages', JSON.stringify(messages));
+            }, 1000);
+        }
+
+        // انٹر کی دبانے پر بھی میسج چلا جائے
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // فرسٹ رینڈر
+        renderUsers();
+    </script>
 </body>
 </html>
